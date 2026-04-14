@@ -3,31 +3,37 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
      *
-     * @var list<string>
+     * @var array<int, string>
      */
+
+    public $table = 'users';
+
     protected $fillable = [
-        'name',
+        'username',
+        'deleted',
         'email',
         'password',
+        'role',
+        'current_role',
+        'remember_token'
     ];
 
     /**
      * The attributes that should be hidden for serialization.
      *
-     * @var list<string>
+     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -35,15 +41,40 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'string',
+    ];
+
+    public function guru()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->hasOne(Guru::class, 'id_user', 'id');
     }
+    public function siswa()
+    {
+        return $this->hasOne(Siswa::class, 'id_user', 'id');
+    }
+    public function hasRole(...$roles)
+    {
+        return in_array($this->current_role, $roles);
+    }
+
+
+    // untuk tampil data pengumuan tamu 
+    public function tamu_penguman()
+    {
+        return hasMany(Tamu::class, 'Opsi_lanjutan', 'username');
+    }
+
+    // public function
+
+    public function absensis()
+{
+    return $this->hasMany(Absensi::class, 'id_user', 'id');
+}
+
 }
