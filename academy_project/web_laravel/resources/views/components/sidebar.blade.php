@@ -11,7 +11,7 @@
             </span>
         </div>
     </a>
-    
+
     <ul class="list-unstyled ps-0" style="width: 100%">
         {{-- Dashboard - Semua Role --}}
         <li class="mb-1" style="">
@@ -38,71 +38,57 @@
                     id="master-collapse">
                     <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
                         <li><a class="link-light rounded mb-1 {{ Request::is('administrasi/users*') ? 'bg-gradient-primary ' : '' }}"
-                                style="width: 100%" href="/administrasi/users">
-                                <i class="material-icons opacity-10 mx-2">groups</i> Data User</a></li>
+                                href="/administrasi/users"><i class="material-icons opacity-10 mx-2">groups</i> Data User</a></li>
                         <li><a class="link-light rounded mb-1 {{ Request::is('administrasi/guru*') ? 'bg-gradient-primary ' : '' }}"
-                                style="width: 100%" href="/administrasi/guru">
-                                <i class="material-icons opacity-10 mx-2">groups</i> Data Guru</a></li>
+                                href="/administrasi/guru"><i class="material-icons opacity-10 mx-2">groups</i> Data Guru</a></li>
                         <li><a class="link-light rounded mb-1 {{ Request::is('administrasi/siswa*') ? 'bg-gradient-primary ' : '' }}"
-                                style="width: 100%" href="/administrasi/siswa">
-                                <i class="material-icons opacity-10 mx-2">groups</i> Data Siswa</a></li>
+                                href="/administrasi/siswa"><i class="material-icons opacity-10 mx-2">groups</i> Data Siswa</a></li>
                         <li><a class="link-light rounded mb-1 {{ Request::is('administrasi/usermoodle*') ? 'bg-gradient-primary ' : '' }}"
-                                style="width: 100%" href="/administrasi/usermoodle">
-                                <i class="material-icons opacity-10 mx-2">groups</i> Data User Moodle</a></li>
+                                href="/administrasi/usermoodle"><i class="material-icons opacity-10 mx-2">groups</i> Data User Moodle</a></li>
                         <li><a class="link-light rounded mb-1 {{ Request::is('akademik/mapel*') ? 'bg-gradient-primary ' : '' }}"
-                                style="width: 100%" href="/akademik/mapel">
-                                <i class="material-icons opacity-10 mx-2">task</i> Data Mapel</a></li>
-                        <li><a class="link-light rounded mb-1 {{ Request::is('saran/kelas*') ? 'bg-gradient-primary ' : '' }}"
-                                style="width: 100%" href="/sarana/kelas">
-                                <i class="material-icons opacity-10 mx-2">task</i> Data Kelas</a></li>
-                        <li><a class="link-light rounded mb-1 {{ Request::is('saran/ruang*') ? 'bg-gradient-primary ' : '' }}"
-                                style="width: 100%" href="/sarana/ruang">
-                                <i class="material-icons opacity-10 mx-2">task</i> Data Ruang</a></li>
-                        <li><a class="link-light rounded mb-1 {{ Request::is('saran/barang*') ? 'bg-gradient-primary ' : '' }}"
-                                style="width: 100%" href="/sarana/barang">
-                                <i class="material-icons opacity-10 mx-2">task</i> Data Barang</a></li>
+                                href="/akademik/mapel"><i class="material-icons opacity-10 mx-2">task</i> Data Mapel</a></li>
+                        <li><a class="link-light rounded mb-1 {{ Request::is('sarana/kelas*') ? 'bg-gradient-primary ' : '' }}"
+                                href="/sarana/kelas"><i class="material-icons opacity-10 mx-2">task</i> Data Kelas</a></li>
+                        <li><a class="link-light rounded mb-1 {{ Request::is('sarana/ruang*') ? 'bg-gradient-primary ' : '' }}"
+                                href="/sarana/ruang"><i class="material-icons opacity-10 mx-2">task</i> Data Ruang</a></li>
+                        <li><a class="link-light rounded mb-1 {{ Request::is('sarana/barang*') ? 'bg-gradient-primary ' : '' }}"
+                                href="/sarana/barang"><i class="material-icons opacity-10 mx-2">task</i> Data Barang</a></li>
                     </ul>
                 </div>
             </li>
 
             {{-- Kurikulum --}}
-            <li class="mb-1" style="width: 100%">
+            <li class="mb-1">
                 <button class="btn align-items-center rounded collapsed text-white font-weight-bold"
                     style="text-transform: none; width: 100%;display: flex; align-items: center; column-gap:10px"
                     data-bs-toggle="collapse" data-bs-target="#kurikulum-collapse" aria-expanded="false">
-                    <span class="material-symbols-outlined">event_note</span>
-                    Kurikulum <i class="material-icons opacity-10 ms-auto">expand_more</i>
+                    <span class="material-symbols-outlined">event_note</span> Kurikulum <i class="material-icons opacity-10 ms-auto">expand_more</i>
                 </button>
                 <div class="collapse {{ Request::is('akademik/jadwal*') || Request::is('akademik/kalender*') ? 'show' : '' }}"
                     id="kurikulum-collapse">
                     <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
                         <li><a class="link-light rounded mb-1 {{ Request::is('akademik/jadwal*') ? 'bg-gradient-primary ' : '' }}"
-                                href="/akademik/jadwal">
-                                <i class="material-icons opacity-10 mx-2">receipt_long</i> Jadwal Pelajaran</a></li>
+                                href="/akademik/jadwal"><i class="material-icons opacity-10 mx-2">receipt_long</i> Jadwal Pelajaran</a></li>
                         <li><a class="link-light rounded mb-1 {{ Request::is('akademik/kalender*') ? 'bg-gradient-primary ' : '' }}"
-                                href="/akademik/kalender/index">
-                                <i class="material-icons opacity-10 mx-2">receipt_long</i> Kalender Akademik</a></li>
+                                href="/akademik/kalender/index"><i class="material-icons opacity-10 mx-2">receipt_long</i> Kalender Akademik</a></li>
                     </ul>
                 </div>
             </li>
 
             {{-- Kesiswaan --}}
-            <li class="mb-1" style="width: 100%">
+            <li class="mb-1">
                 <button class="btn align-items-center rounded collapsed text-white font-weight-bold"
                     style="text-transform: none; width: 100%;display: flex; align-items: center; column-gap:10px;"
                     data-bs-toggle="collapse" data-bs-target="#kesiswaan-collapse" aria-expanded="false">
-                    <span class="material-symbols-outlined">school</span>
-                    Kesiswaan <i class="material-icons opacity-10 ms-auto">expand_more</i>
+                    <span class="material-symbols-outlined">school</span> Kesiswaan <i class="material-icons opacity-10 ms-auto">expand_more</i>
                 </button>
                 <div class="collapse {{ Request::is('akademik/absensi*') || Request::is('data-nilai-moodle/*') ? 'show' : '' }}"
                     id="kesiswaan-collapse">
                     <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
                         <li><a class="link-light rounded mb-1 {{ Request::is('akademik/absensi*') ? 'bg-gradient-primary ' : '' }}"
-                                href="/akademik/absensi/admin">
-                                <i class="material-icons opacity-10 mx-2">receipt_long</i> Presensi Admin</a></li>
+                                href="/akademik/absensi/admin"><i class="material-icons opacity-10 mx-2">receipt_long</i> Presensi Admin</a></li>
                         <li><a class="link-light rounded mb-1 {{ Request::is('data-nilai-moodle/*') ? 'bg-gradient-primary ' : '' }}"
-                                href="/data-nilai-moodle/course-moodle">
-                                <i class="material-icons opacity-10 mx-2">receipt_long</i> Nilai Moodle</a></li>
+                                href="/data-nilai-moodle/course-moodle"><i class="material-icons opacity-10 mx-2">receipt_long</i> Nilai Moodle</a></li>
                     </ul>
                 </div>
             </li>
@@ -112,56 +98,42 @@
                 <button class="btn align-items-center rounded collapsed text-white font-weight-bold"
                     style="text-transform: none; width: 100%;display: flex; align-items: center; column-gap:10px"
                     data-bs-toggle="collapse" data-bs-target="#sarpras-collapse" aria-expanded="false">
-                    <span class="material-symbols-outlined">architecture</span>
-                    Sarpras <i class="material-icons opacity-10 ms-auto">expand_more</i>
+                    <span class="material-symbols-outlined">architecture</span> Sarpras <i class="material-icons opacity-10 ms-auto">expand_more</i>
                 </button>
                 <div class="collapse {{ Request::is('sarana/inventaris*') || Request::is('data-peminjaman*') || Request::is('peminjaman-barang*') ? 'show' : '' }}"
                     id="sarpras-collapse">
                     <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
                         <li><a class="link-light rounded mb-1 {{ Request::is('sarana/inventaris*') ? 'bg-gradient-primary ' : '' }}"
-                                href="/sarana/inventaris">
-                                <i class="material-icons opacity-10 mx-2">task</i> Inventaris</a></li>
+                                href="/sarana/inventaris"><i class="material-icons opacity-10 mx-2">task</i> Inventaris</a></li>
                         <li><a class="link-light rounded mb-1 {{ Request::is('data-peminjaman') ? 'bg-gradient-primary ' : '' }}"
-                                href="/data-peminjaman">
-                                <i class="material-icons opacity-10 mx-2">task</i> Peminjaman Ruang</a></li>
+                                href="/data-peminjaman"><i class="material-icons opacity-10 mx-2">task</i> Peminjaman Ruang</a></li>
                         <li><a class="link-light rounded mb-1 {{ Request::is('peminjaman-barang*') ? 'bg-gradient-primary ' : '' }}"
-                                href="{{ route('peminjamanBarang.index') }}">
-                                <i class="material-icons opacity-10 mx-2">task</i> Peminjaman Barang</a></li>
+                                href="{{ route('peminjamanBarang.index') }}"><i class="material-icons opacity-10 mx-2">task</i> Peminjaman Barang</a></li>
                     </ul>
                 </div>
             </li>
 
             {{-- Humas --}}
-            <li class="mb-1" style="width: 100%">
+            <li class="mb-1">
                 <button class="btn align-items-center rounded collapsed text-white font-weight-bold"
                     style="text-transform: none; width: 100%;display: flex; align-items: center; column-gap:10px"
                     data-bs-toggle="collapse" data-bs-target="#humas-collapse" aria-expanded="false">
-                    <span class="material-symbols-outlined">workspaces</span>
-                    Humas <i class="material-icons opacity-10 ms-auto">expand_more</i>
+                    <span class="material-symbols-outlined">workspaces</span> Humas <i class="material-icons opacity-10 ms-auto">expand_more</i>
                 </button>
                 <div class="collapse {{ Request::is('data-tamu*') || Request::is('mou*') ? 'show' : '' }}"
                     id="humas-collapse">
                     <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
                         <li><a class="link-light rounded mb-1 {{ Request::is('data-tamu*') ? 'bg-gradient-primary ' : '' }}"
-                                href="/data-tamu">
-                                <i class="material-icons opacity-10 mx-2">groups</i> Tamu</a></li>
+                                href="/data-tamu"><i class="material-icons opacity-10 mx-2">groups</i> Tamu</a></li>
                         <li><a class="link-light rounded mb-1 {{ Request::is('mou*') ? 'bg-gradient-primary ' : '' }}"
-                                href="/mou">
-                                <i class="material-icons opacity-10 mx-2">groups</i> Kerja Sama (MoU)</a></li>
+                                href="/mou"><i class="material-icons opacity-10 mx-2">groups</i> Kerja Sama (MoU)</a></li>
                     </ul>
                 </div>
             </li>
 
-            {{-- Elearning --}}
-            <li class="mb-1">
-                <a class="btn rounded text-white font-weight-bold"
-                    style="text-transform: none; width: 100%;display: flex; align-items: center; column-gap:10px"
-                    href="javascript:void(0);" onclick="konfirmasiBukaLink()">
-                    <span class="material-symbols-outlined">task</span> Elearning
-                </a>
-            </li>
+            {{-- Menu Elearning sudah dihapus --}}
 
-            {{-- Testing API (TAMBAHAN) --}}
+            {{-- Testing API --}}
             <li class="mb-1">
                 <a class="btn rounded text-white font-weight-bold {{ Request::is('testing-api*') ? 'bg-gradient-primary ' : '' }}"
                     style="text-transform: none; width: 100%;display: flex; align-items: center; column-gap:10px"
@@ -170,31 +142,13 @@
                 </a>
             </li>
 
-        {{-- ============================================ --}}
-        {{-- SIDEBAR WAKASEK --}}
-        {{-- ============================================ --}}
-        @elseif (auth()->user()->hasRole('wakasek'))
+            {{-- Dataset Students --}}
             <li class="mb-1">
-                <button class="btn align-items-center rounded collapsed text-white font-weight-bold"
+                <a class="btn rounded text-white font-weight-bold {{ Request::is('dataset-students*') ? 'bg-gradient-primary ' : '' }}"
                     style="text-transform: none; width: 100%;display: flex; align-items: center; column-gap:10px"
-                    data-bs-toggle="collapse" data-bs-target="#sarpras-collapse" aria-expanded="false">
-                    <span class="material-symbols-outlined">architecture</span>
-                    Sarpras <i class="material-icons opacity-10 ms-auto">expand_more</i>
-                </button>
-                <div class="collapse {{ Request::is('sarana/inventaris*') || Request::is('data-peminjaman*') || Request::is('peminjaman-barang*') ? 'show' : '' }}"
-                    id="sarpras-collapse">
-                    <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
-                        <li><a class="link-light rounded mb-1 {{ Request::is('sarana/inventaris*') ? 'bg-gradient-primary ' : '' }}"
-                                href="/sarana/inventaris">
-                                <i class="material-icons opacity-10 mx-2">task</i> Inventaris</a></li>
-                        <li><a class="link-light rounded mb-1 {{ Request::is('data-peminjaman') ? 'bg-gradient-primary ' : '' }}"
-                                href="/data-peminjaman">
-                                <i class="material-icons opacity-10 mx-2">task</i> Peminjaman Ruang</a></li>
-                        <li><a class="link-light rounded mb-1 {{ Request::is('peminjaman-barang*') ? 'bg-gradient-primary ' : '' }}"
-                                href="{{ route('peminjamanBarang.index') }}">
-                                <i class="material-icons opacity-10 mx-2">task</i> Peminjaman Barang</a></li>
-                    </ul>
-                </div>
+                    href="{{ route('dataset.index') }}">
+                    <span class="material-symbols-outlined">database</span> Dataset Students
+                </a>
             </li>
 
         {{-- ============================================ --}}
@@ -208,18 +162,21 @@
                     <span class="material-symbols-outlined">event_note</span> Jadwal Mengajar
                 </a>
             </li>
-            <li class="mb-1" style="width: 100%">
+            <li class="mb-1">
                 <a class="btn align-items-center rounded text-white font-weight-bold"
                     style="text-transform: none; width: 100%; display: flex; align-items: center; column-gap:10px;"
                     href="/akademik/absensi/guru">
                     <span class="material-symbols-outlined">school</span> Presensi
                 </a>
             </li>
+            {{-- Menu Elearning dihapus --}}
+
+            {{-- Dataset Students --}}
             <li class="mb-1">
-                <a class="btn rounded text-white font-weight-bold"
+                <a class="btn rounded text-white font-weight-bold {{ Request::is('dataset-students*') ? 'bg-gradient-primary ' : '' }}"
                     style="text-transform: none; width: 100%;display: flex; align-items: center; column-gap:10px"
-                    href="javascript:void(0);" onclick="konfirmasiBukaLink()">
-                    <span class="material-symbols-outlined">task</span> Elearning
+                    href="{{ route('dataset.index') }}">
+                    <span class="material-symbols-outlined">database</span> Dataset Students
                 </a>
             </li>
 
@@ -234,29 +191,14 @@
                     <span class="material-symbols-outlined">event_note</span> Jadwal Pelajaran
                 </a>
             </li>
-            <li class="mb-1" style="width: 100%">
+            <li class="mb-1">
                 <a class="btn align-items-center rounded text-white font-weight-bold"
                     style="text-transform: none; width: 100%; display: flex; align-items: center; column-gap:10px;"
                     href="/akademik/absensi/siswa">
                     <span class="material-symbols-outlined">school</span> Presensi
                 </a>
             </li>
-            <li class="mb-1">
-                <a class="btn rounded text-white font-weight-bold"
-                    style="text-transform: none; width: 100%;display: flex; align-items: center; column-gap:10px"
-                    href="javascript:void(0);" onclick="konfirmasiBukaLink()">
-                    <span class="material-symbols-outlined">task</span> Elearning
-                </a>
-            </li>
+            {{-- Menu Elearning dihapus --}}
         @endif
     </ul>
 </div>
-
-<script>
-    function konfirmasiBukaLink() {
-        var konfirmasi = confirm("Apakah Anda yakin ingin membuka Elearning?");
-        if (konfirmasi) {
-            window.open("http://localhost/moodle/login/index.php", "_blank");
-        }
-    }
-</script>

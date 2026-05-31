@@ -1,7 +1,3 @@
-{{-- Load Select2 sebelum extends --}}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
-
 @extends('components.main')
 
 @section('title-content', 'Data Tamu')
@@ -32,56 +28,25 @@
                 {{-- Nama Tamu --}}
                 <div class="mb-3 col-md-6" style="padding-left: 20px; padding-right: 20px;">
                   <label for="nama_tamu" class="form-label">Nama Tamu</label>
-                  <input id="nama_tamu" type="text" name="namaTamu" class="form-control rounded-3"
-                      maxlength="20" value="{{ old('namaTamu') }}"
-                      @if($errors->has('namaTamu')) autofocus @endif>
-                  @error('namaTamu')
-                      <span class="text-danger">{{ $message }}</span>
-                  @enderror
+                  <input id="nama_tamu" type="text" name="namaTamu" class="form-control rounded-3" 
+                         maxlength="20" value="{{ old('namaTamu') }}" required>
+                  @error('namaTamu') <span class="text-danger">{{ $message }}</span> @enderror
                 </div>
 
-                {{-- Alamat --}}
+                {{-- Alamat / Asal Instansi --}}
                 <div class="mb-3 col-md-6" style="padding-left: 20px; padding-right: 20px;">
                   <label for="input_alamat" class="form-label">Alamat / Asal Instansi</label>
-                  <input id="input_alamat" type="text" name="alamatTamu" class="form-control"
-                      value="{{ old('alamatTamu') }}"
-                      @if($errors->has('alamatTamu')) autofocus @endif>
-                  @error('alamatTamu')
-                      <span class="text-danger">{{ $message }}</span>
-                  @enderror
-                </div>
-
-                {{-- Tujuan Bertemu --}}
-                <div class="mb-3" style="padding-left: 20px; padding-right: 20px;">
-                  <label class="col-form-label">Bertujuan Bertemu Dengan Siapa</label>
-                  <div class="row g-3 py-1">
-                    <div class="col-md-4">
-                      <select onchange="handleTujuan(this)" id="opsi_tujuan" name="Opsi" class="form-select">
-                        <option value="" selected disabled>Pilih Tujuan</option>
-                        @foreach ($userRoles as $role)
-                          <option value="{{ $role }}">{{ ucwords($role) }}</option>
-                        @endforeach
-                      </select>
-                    </div>
-                    <div class="col-md-4">
-                      <select id="opsi_lanjutan" name="Opsi_Lanjutan" class="form-select">
-                        <option value="">Cari Nama</option>
-                      </select>
-                    </div>
-                  </div>
-                  <span class="form-text">
-                    Keterangan : Silahkan pilih Tujuan, kemudian cari nama yang ingin ditemui.
-                  </span>
+                  <input id="input_alamat" type="text" name="alamatTamu" class="form-control" 
+                         value="{{ old('alamatTamu') }}" required>
+                  @error('alamatTamu') <span class="text-danger">{{ $message }}</span> @enderror
                 </div>
 
                 {{-- Keterangan --}}
                 <div class="mb-3" style="padding-left: 20px; padding-right: 20px;">
                   <label for="keterangan" class="form-label fs-6">Keterangan</label>
-                  <textarea class="form-control" name="keteranganTamu" id="keterangan" rows="4"
-                      placeholder="Jelaskan tujuan kedatangan">{{ old('keteranganTamu') }}</textarea>
-                  @error('keteranganTamu')
-                      <span class="text-danger">{{ $message }}</span>
-                  @enderror
+                  <textarea class="form-control" name="keteranganTamu" id="keterangan" rows="4" 
+                            placeholder="Jelaskan tujuan kedatangan" required>{{ old('keteranganTamu') }}</textarea>
+                  @error('keteranganTamu') <span class="text-danger">{{ $message }}</span> @enderror
                 </div>
 
                 <div class="card-footer d-flex justify-content-end" style="gap: 10px">
@@ -100,53 +65,4 @@
 </div>
 @endsection
 
-{{-- Letakkan script di bawah, gunakan @push('script') agar masuk ke yield('script') --}}
-@push('script')
-<!-- Select2 -->
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.0/dist/jquery.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-<script>
-  $(document).ready(function() {
-    const opsi_lanjutan_dropdown = $('#opsi_lanjutan');
-    const opsi_tujuan_dropdown = $('#opsi_tujuan');
-
-    opsi_tujuan_dropdown.select2({
-      theme: 'bootstrap-5',
-      width: '100%',
-      placeholder: 'Pilih Tujuan',
-    });
-
-    opsi_lanjutan_dropdown.select2({
-      theme: 'bootstrap-5',
-      width: '100%',
-      placeholder: 'Cari nama',
-    });
-
-    const handleTujuan = async (role) => {
-      try {
-        const res = await fetch(`/get-username-by-role/${role}`);
-        const result = await res.json();
-        // result = [{nama: '...', username: '...'}, ...]
-        let options = result.map(user => `<option value="${user.username}">${user.nama}</option>`);
-        opsi_lanjutan_dropdown.empty().append(options).trigger('change');
-      } catch (error) {
-        console.error('Error:', error);
-      }
-    };
-
-    opsi_tujuan_dropdown.on('change', function() {
-      const selectedRole = $(this).val();
-      if (selectedRole) handleTujuan(selectedRole);
-    });
-
-    opsi_lanjutan_dropdown.on('select2:opening', function(e) {
-      if (!opsi_tujuan_dropdown.val()) {
-        e.preventDefault();
-        alert('Pilih terlebih dahulu tujuan untuk memfilter nama.');
-      }
-    });
-  });
-</script>
-@endpush
+{{-- Tidak ada script tambahan karena Select2 dihapus --}}

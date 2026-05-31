@@ -6,6 +6,7 @@
     </ol>
     <h6 class="font-weight-bolder mb-0">Dashboard</h6>
 @endsection
+
 @section('additional-js-top')
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.4.0/fullcalendar.css" />
@@ -14,10 +15,144 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.4.0/fullcalendar.min.js"></script>
     <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 @endsection
+
 @section('content')
     @include('components.dashboard.statistic')
-    
+
+    {{-- ========== SECTION AI CLUSTERING (Hanya untuk Guru & Admin) ========== --}}
+    @if(auth()->user()->hasRole('guru') || auth()->user()->hasRole('admin'))
+    <div class="card mt-4">
+        <div class="card-header bg-gradient-primary text-white">
+            <h5 class="mb-0">🧠 Analisis AI - Pengelompokan Siswa (K-Means)</h5>
+        </div>
+        <div class="card-body">
+            <form action="{{ route('ai.analyze') }}" method="POST" class="d-inline-block mb-3">
+                @csrf
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-robot"></i> Jalankan Analisis AI (Cluster Semua Siswa)
+                </button>
+            </form>
+
+            {{-- Hasil Clustering --}}
+            @if(session('ai_result'))
+                @php $result = session('ai_result'); @endphp
+                <div class="alert alert-success mt-3">
+                    <h5>📊 Hasil Clustering Siswa</h5>
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-bordered table-striped">
+                            <thead class="sticky-top bg-white">
+                                <tr>
+                                    <th>Nama Siswa</th>
+                                    <th>Cluster</th>
+                                    <th>Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($result['students'] as $student)
+                                <tr>
+                                    <td>{{ $student['name'] }}</td>
+                                    <td>{{ $student['cluster'] }}</td>
+                                    <td>
+                                        @if($student['cluster'] == 0)
+                                            <span class="badge bg-success text-white">🏆 Berprestasi</span>
+                                        @elseif($student['cluster'] == 1)
+                                            <span class="badge bg-primary text-white">📘 Rata-rata</span>
+                                        @else
+                                            <span class="badge bg-danger text-white">⚠️ Butuh Bimbingan</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h6 class="mt-3">📈 Ringkasan per Cluster</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-group">
+                                @foreach($result['summary'] as $clusterName => $stats)
+                                    <li class="list-group-item">
+                                        <strong>{{ $clusterName }}</strong> ({{ $stats['jumlah'] }} siswa)<br>
+                                        Rata-rata: Math {{ $stats['rata_rata_math'] }} | Reading {{ $stats['rata_rata_reading'] }} | Writing {{ $stats['rata_rata_writing'] }}
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <canvas id="clusterChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const labels = {!! json_encode(array_keys($result['summary'])) !!};
+                        const counts = {!! json_encode(array_column($result['summary'], 'jumlah')) !!};
+                        const ctx = document.getElementById('clusterChart').getContext('2d');
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Jumlah Siswa',
+                                    data: counts,
+                                    backgroundColor: ['#28a745', '#007bff', '#dc3545'],
+                                    borderColor: '#fff',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: {
+                                    y: { beginAtZero: true, stepSize: 1, title: { display: true, text: 'Jumlah Siswa' } }
+                                }
+                            }
+                        });
+                    });
+                </script>
+            @endif
+
+            {{-- Form Prediksi Satu Siswa --}}
+            <hr>
+            <h6>🔮 Prediksi Cluster untuk Siswa Baru</h6>
+            <form action="{{ route('ai.predict') }}" method="POST" class="row g-3">
+                @csrf
+                <div class="col-md-4">
+                    <label>Nilai Matematika</label>
+                    <input type="number" name="math_score" class="form-control" required step="1" min="0" max="100">
+                </div>
+                <div class="col-md-4">
+                    <label>Nilai Reading</label>
+                    <input type="number" name="reading_score" class="form-control" required step="1" min="0" max="100">
+                </div>
+                <div class="col-md-4">
+                    <label>Nilai Writing</label>
+                    <input type="number" name="writing_score" class="form-control" required step="1" min="0" max="100">
+                </div>
+                <div class="col-12 mt-2">
+                    <button type="submit" class="btn btn-secondary">Prediksi Sekarang</button>
+                </div>
+            </form>
+
+            @if(session('prediction_result'))
+                <div class="alert alert-info mt-3">
+                    <strong>Hasil Prediksi:</strong> Siswa ini masuk ke dalam <strong>{{ session('prediction_result')['cluster_name'] }}</strong> (Cluster {{ session('prediction_result')['cluster'] }}).
+                </div>
+            @endif
+
+            @if(session('error'))
+                <div class="alert alert-danger mt-3">{{ session('error') }}</div>
+            @endif
+        </div>
+    </div>
+    @endif
+    {{-- ========== END AI CLUSTERING ========== --}}
+
+    {{-- Data Guru / Siswa (existing) --}}
     @if (auth()->user()->hasRole('guru'))
         @php $guru = auth()->user(); $guruData = $guru->guru_data ?? []; @endphp
         @if (empty($guruData))
@@ -103,38 +238,6 @@
             @empty
                 <p class="text-muted">Tidak ada pengumuman.</p>
             @endforelse
-        </div>
-    </div>
-
-    {{-- Tamu --}}
-    <div class="card mt-4">
-        <div class="card-header"><h4>Pengumuman Tamu</h4></div>
-        <div class="card-body">
-            @php $hasActiveTamu = false; @endphp
-            @foreach ($tamu_pesans as $tamu)
-                @php $data = $tamu->data_tambahan ?? []; @endphp
-                @if(($data['status'] ?? '') !== 'pesan_telah_selesai')
-                    @php $hasActiveTamu = true; @endphp
-                    <div class="row mb-3 border p-2">
-                        <div class="col-md-8">
-                            <strong>Nama:</strong> {{ $data['nama_tamu'] ?? '' }}<br>
-                            <strong>Alamat:</strong> {{ $data['alamat'] ?? '' }}<br>
-                            <strong>Keperluan:</strong> {{ $tamu->message }}
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <form action="{{ route('dashboard.terimaPesan', $tamu->_id) }}" method="POST" class="d-inline">
-                                @csrf
-                                <button class="btn btn-sm btn-success">Terima</button>
-                            </form>
-                            <form action="{{ route('dashboard.hapusPesan', $tamu->_id) }}" method="POST" class="d-inline">
-                                @csrf @method('DELETE')
-                                <button class="btn btn-sm btn-danger">Hapus</button>
-                            </form>
-                        </div>
-                    </div>
-                @endif
-            @endforeach
-            @if(!$hasActiveTamu) <p class="text-muted">Tidak ada tamu aktif.</p> @endif
         </div>
     </div>
 

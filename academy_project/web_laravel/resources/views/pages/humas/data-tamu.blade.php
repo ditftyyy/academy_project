@@ -28,7 +28,6 @@
                                     <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Nama</th>
                                     <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Asal</th>
                                     <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Tujuan</th>
-                                    <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Nama Yang Dituju</th>
                                     <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Keterangan</th>
                                     <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Status</th>
                                     <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Aksi</th>
@@ -38,51 +37,73 @@
                                 @forelse ($tamus as $t)
                                     @php
                                         $data = $t->data_tambahan ?? [];
+                                        $status = $data['status'] ?? 'menunggu';
                                     @endphp
                                     <tr>
                                         <td class="text-center">{{ $loop->iteration }}</td>
                                         <td class="text-center">{{ $data['nama_tamu'] ?? '' }}</td>
                                         <td class="text-center">{{ $data['alamat'] ?? '' }}</td>
                                         <td class="text-center">{{ $data['tujuan'] ?? '' }}</td>
-                                        <td class="text-center">{{ $data['tujuan_nama'] ?? $data['tujuan_username'] ?? '' }}</td>
                                         <td class="text-center">{{ $t->message ?? '' }}</td>
                                         <td class="text-center">
-                                            @php $status = $data['status'] ?? 'menunggu'; @endphp
                                             @if ($status === 'menunggu')
-                                                Menunggu
+                                                <span class="badge bg-warning text-dark">Menunggu</span>
                                             @elseif ($status === 'pesan_telah_diterima')
-                                                Pesan Diterima
+                                                <span class="badge bg-info">Diterima</span>
                                             @elseif ($status === 'pesan_telah_selesai')
-                                                Pesan Selesai
+                                                <span class="badge bg-success">Selesai</span>
                                             @else
                                                 {{ $status }}
                                             @endif
                                         </td>
                                         <td class="text-center">
+                                            {{-- Tombol Detail --}}
                                             <button type="button" data-bs-toggle="modal" data-bs-target="#detail-modal"
-                                                class="btn btn-info font-weight-bold btn--edit text-sm rounded-circle"
-                                                style="margin: 5px 0;" data-bs-toggle="tooltip" data-bs-placement="bottom"
-                                                title="Detail"
+                                                class="btn btn-info btn-sm rounded-circle"
+                                                style="margin: 2px 0;" title="Detail"
                                                 onclick="showDetail('{{ $t->_id }}')">
                                                 <i class="fa fa-eye"></i>
                                             </button>
+                                            {{-- Tombol Edit --}}
                                             <a href="/tamu-edit/{{ $t->_id }}"
-                                                class="btn btn-warning font-weight-bold text-sm rounded-circle"
-                                                data-bs-toggle="tooltip" data-bs-placement="bottom" style="margin: 5px 0;"
-                                                title="Edit">
+                                                class="btn btn-warning btn-sm rounded-circle"
+                                                style="margin: 2px 0;" title="Edit">
                                                 <i class="fa fa-edit"></i>
                                             </a>
+                                            {{-- Tombol Hapus --}}
                                             <a href="/tamu-delete/{{ $t->_id }}"
                                                 onclick="return confirm('Anda yakin akan menghapus data ini?')"
-                                                class="btn btn-danger font-weight-bold text-sm rounded-circle"
-                                                data-bs-toggle="tooltip" data-bs-placement="bottom" style="margin: 5px 0;"
-                                                title="Hapus">
+                                                class="btn btn-danger btn-sm rounded-circle"
+                                                style="margin: 2px 0;" title="Hapus">
                                                 <i class="fa fa-trash"></i>
                                             </a>
+                                            {{-- Tombol Update Status - hanya tampil jika status belum selesai --}}
+                                            @if ($status !== 'pesan_telah_selesai')
+                                                <div class="btn-group mt-1" role="group">
+                                                    <form action="/tamu-update-status/{{ $t->_id }}" method="POST" style="display: inline-block;">
+                                                        @csrf
+                                                        <input type="hidden" name="status" value="pesan_telah_diterima">
+                                                        <button type="submit" class="btn btn-success btn-sm rounded-pill px-2 py-1" 
+                                                                onclick="return confirm('Tandai tamu ini sebagai DITERIMA?')"
+                                                                style="font-size: 10px;">
+                                                            <i class="fa fa-check"></i> Terima
+                                                        </button>
+                                                    </form>
+                                                    <form action="/tamu-update-status/{{ $t->_id }}" method="POST" style="display: inline-block;">
+                                                        @csrf
+                                                        <input type="hidden" name="status" value="pesan_telah_selesai">
+                                                        <button type="submit" class="btn btn-secondary btn-sm rounded-pill px-2 py-1" 
+                                                                onclick="return confirm('Tandai tamu ini sebagai SELESAI?')"
+                                                                style="font-size: 10px;">
+                                                            <i class="fa fa-flag-checkered"></i> Selesai
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            @endif
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="8" class="text-center">Tidak ada data tamu.</td></tr>
+                                    <tr><td colspan="7" class="text-center">Tidak ada data tamu.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -106,7 +127,6 @@
                                     <li class="list-group-item"><div class="row"><div class="col-md-5 fw-bold">Nama</div><div class="col-md-7" id="modal-nama"></div></div></li>
                                     <li class="list-group-item"><div class="row"><div class="col-md-5 fw-bold">Asal</div><div class="col-md-7" id="modal-asal"></div></div></li>
                                     <li class="list-group-item"><div class="row"><div class="col-md-5 fw-bold">Tujuan</div><div class="col-md-7" id="modal-tujuan"></div></div></li>
-                                    <li class="list-group-item"><div class="row"><div class="col-md-5 fw-bold">Nama Tujuan</div><div class="col-md-7" id="modal-nama-tujuan"></div></div></li>
                                     <li class="list-group-item"><div class="row"><div class="col-md-5 fw-bold">Keterangan</div><div class="col-md-7" id="modal-keterangan"></div></div></li>
                                 </ul>
                             </div>
@@ -127,7 +147,6 @@
                 'nama' => $d['nama_tamu'] ?? '',
                 'asal' => $d['alamat'] ?? '',
                 'tujuan' => $d['tujuan'] ?? '',
-                'nama_tujuan' => $d['tujuan_nama'] ?? $d['tujuan_username'] ?? '',
                 'keterangan' => $t->message ?? ''
             ];
         })) !!};
@@ -138,7 +157,6 @@
             document.getElementById('modal-nama').innerText = data.nama;
             document.getElementById('modal-asal').innerText = data.asal;
             document.getElementById('modal-tujuan').innerText = data.tujuan;
-            document.getElementById('modal-nama-tujuan').innerText = data.nama_tujuan;
             document.getElementById('modal-keterangan').innerText = data.keterangan;
         }
 

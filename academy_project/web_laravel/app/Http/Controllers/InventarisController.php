@@ -8,123 +8,67 @@ use Illuminate\Http\Request;
 
 class InventarisController extends Controller
 {
-    /**
-     * Halaman daftar inventaris
-     */
     public function index()
     {
         $ruangs = MongoRuang::all();
-        
-        return view('pages.sarana.data-inventaris.inventaris', [
-            'ruangs' => $ruangs,
-            'title' => 'Daftar Inventaris'
-        ]);
+        return view('pages.sarana.data-inventaris.inventaris', compact('ruangs'));
     }
 
-    /**
-     * Kelola barang per ruangan
-     */
     public function aturBarang($ruangId)
     {
         $ruang = MongoRuang::findOrFail($ruangId);
-        $inventaris = MongoInventaris::where('ruang.id', $ruangId)->get();
-        
-        return view('pages.sarana.data-inventaris.kelolabarang', [
-            'ruangs' => $ruang,
-            'inventaris' => $inventaris,
-            'title' => 'Daftar Inventaris - ' . $ruang->nama_ruang
-        ]);
+        // Ambil inventaris ruang (yang memiliki field ruang.id = $ruangId)
+        // Perhatikan: karena data lama mungkin ruang masih string, kita tidak bisa mengambilnya.
+        // Tapi kita hanya akan menampilkan data yang sudah disimpan melalui aplikasi (array).
+        $inventaris = MongoInventaris::where('ruang.id', (string) $ruang->_id)->get();
+        // Barang master (belum punya ruang) – cek ruang null atau tidak ada field ruang
+        $masterBarang = MongoInventaris::whereNull('ruang.id')->orWhere('ruang', null)->get();
+
+        return view('pages.sarana.data-inventaris.kelolabarang', compact('ruang', 'inventaris', 'masterBarang'));
     }
 
-    /**
-     * Tambah barang ke ruangan
-     */
     public function store(Request $request, $ruangId)
     {
         $request->validate([
-            'nama_barang' => 'required|string|max:255',
+            'barang_id'     => 'required|exists:inventaris,_id',
             'jumlah_barang' => 'required|integer|min:1',
-            'jenis' => 'required|string',
         ]);
 
+        $barangMaster = MongoInventaris::findOrFail($request->barang_id);
         $ruang = MongoRuang::findOrFail($ruangId);
 
-        MongoInventaris::create([
-            'nama_barang' => $request->nama_barang,
-            'jenis' => $request->jenis,
-            'tahun_pengadaan' => $request->tahun_pengadaan ?? now()->format('Y-m-d'),
-            'image' => $request->image ?? null,
-            'jumlah_seluruh' => $request->jumlah_barang,
-            'jumlah_baik' => $request->jumlah_barang,
-            'jumlah_rusak' => 0,
-            'ruang' => [
-                'id' => $ruang->_id,
+        // Cek apakah barang sudah ada di ruang ini (hanya cek data yang sudah disimpan dengan format array)
+        $exists = MongoInventaris::where('ruang.id', (string) $ruang->_id)
+            ->where('nama_barang', $barangMaster->nama_barang)
+            ->first();
+        if ($exists) {
+            return redirect()->back()->with('toast_error', 'Barang sudah ada di ruang ini.');
+        }
+
+        // Simpan inventaris ruang (pastikan ruang disimpan sebagai array, bukan string)
+        $inventarisBaru = MongoInventaris::create([
+            'nama_barang'      => $barangMaster->nama_barang,
+            'jenis'            => $barangMaster->jenis,
+            'tahun_pengadaan'  => $barangMaster->tahun_pengadaan,
+            'image'            => null,
+            'jumlah_seluruh'   => (int) $request->jumlah_barang,
+            'jumlah_baik'      => (int) $request->jumlah_barang,
+            'jumlah_rusak'     => 0,
+            'ruang'            => [   // array biasa, bukan string
+                'id'   => (string) $ruang->_id,
                 'nama' => $ruang->nama_ruang,
             ],
             'riwayat_peminjaman' => [],
         ]);
 
         return redirect()->route('atur-barang', $ruangId)
-            ->with('toast_success', 'Data inventaris berhasil ditambahkan');
+               ->with('toast_success', 'Barang berhasil ditambahkan ke ruang ini.');
     }
 
-    /**
-     * Hapus barang dari ruangan
-     */
     public function destroy($id)
     {
-        try {
-            $inventaris = MongoInventaris::findOrFail($id);
-            $inventaris->delete();
-
-            return redirect()->back()
-                ->with('success', 'Inventaris berhasil dihapus.');
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'Gagal menghapus inventaris: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Cari barang
-     */
-    public function search(Request $request)
-    {
-        $searchTerm = $request->get('searchTerm');
-        
-        $barangs = MongoInventaris::where('nama_barang', 'like', "%{$searchTerm}%")
-            ->get(['nama_barang', 'jenis', 'jumlah_baik', 'ruang.nama']);
-        
-        return response()->json($barangs);
-    }
-
-    /**
-     * Detail barang berdasarkan nama
-     */
-    public function getDetailByName(Request $request)
-    {
-        $selectedBarang = $request->input('selectedBarang');
-        
-        $barang = MongoInventaris::where('nama_barang', $selectedBarang)->first();
-        
-        if ($barang) {
-            return response()->json([
-                'barang_id' => $barang->_id,
-                'nama_barang' => $barang->nama_barang,
-                'tahun_pengadaan' => $barang->tahun_pengadaan,
-                'jenis' => $barang->jenis,
-            ]);
-        }
-        
-        return response()->json(['error' => 'Barang tidak ditemukan'], 404);
-    }
-
-    /**
-     * Ambil semua barang
-     */
-    public function getAllBarang()
-    {
-        $barangs = MongoInventaris::all();
-        return response()->json($barangs);
+        $inventaris = MongoInventaris::findOrFail($id);
+        $inventaris->delete();
+        return back()->with('toast_success', 'Barang dihapus dari ruang ini.');
     }
 }

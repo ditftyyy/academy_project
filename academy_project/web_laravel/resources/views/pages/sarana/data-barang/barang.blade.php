@@ -20,28 +20,19 @@
             <div class="card-body px-0 pb-2">
                 <div class="table-responsive pb-2 px-3">
                     @if (auth()->user()->hasRole('admin'))
-                    <a href="/sarana/barang-tambah" type="submit" id="btntambah" class="btn btn-primary font-weight-bold text-xs">
-                        <i class="material-icons opacity-10">add</i>
-                        Tambah
+                    <a href="/sarana/barang-tambah" type="submit" id="btntambah" class="btn btn-primary btn-sm">
+                        <i class="material-icons opacity-10">add</i> Tambah
                     </a>
                     @endif
                     <table id="example" class="table align-items-center mb-0">
                         <thead>
                             <tr>
-                                <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">
-                                    No</th>
-                                <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">
-                                    Nama Barang</th>
-                                <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">
-                                    Tahun Pengadaan</th>
-                                <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">
-                                    Jenis</th>
-                                <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">
-                                    Gambar</th>
-                                <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">
-                                    Jumlah </th>
-                                <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">
-                                    Aksi</th>
+                                <th class="text-center">No</th>
+                                <th class="text-center">Nama Barang</th>
+                                <th class="text-center">Tahun Pengadaan</th>
+                                <th class="text-center">Jenis</th>
+                                <th class="text-center">Jumlah</th>
+                                <th class="text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -51,17 +42,18 @@
                                 <td class="text-center">{{ $barang->nama_barang }}</td>
                                 <td class="text-center">{{ $barang->tahun_pengadaan }}</td>
                                 <td class="text-center">{{ $barang->jenis }}</td>
-                                <td><img src="{{ asset('storage/image/' . $barang->image) }}" height="100px" width="120px"></td>
-                                <td class="text-center">{{ $barang->jumlah_seluruh_barang }}</td>
+                                <td class="text-center">{{ $barang->jumlah_seluruh }}</td>
                                 <td class="text-center">
-                                    <a href="{{ route('update-barang', $barang->_id) }}"  class="btn
-                                            btn-warning font-weight-bold btn--edit text-sm rounded-circle">
+                                    <a href="{{ route('update-barang', $barang->_id) }}" class="btn btn-warning btn-sm rounded-circle">
                                         <i class="fa fa-edit"></i>
                                     </a>
-                                    <a href="{{ route('hapus-barang', $barang->_id) }}" onclick="return confirm('Anda yakin akan menghapus data ini?')"  class="btn
-                                            btn-danger font-weight-bold btn--edit text-sm rounded-circle">
-                                        <i class="fa fa-trash"></i>
-                                    </a>
+                                    <form action="{{ route('hapus-barang', $barang->_id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Yakin hapus data ini?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger btn-sm rounded-circle">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                             @endforeach

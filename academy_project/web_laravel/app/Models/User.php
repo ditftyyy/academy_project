@@ -2,79 +2,79 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Jenssegers\Mongodb\Eloquent\Model as Eloquent;
+use Illuminate\Auth\Authenticatable;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Eloquent implements AuthenticatableContract
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use Authenticatable, HasApiTokens, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-
-    public $table = 'users';
+    protected $connection = 'mongodb';
+    protected $collection = 'users';
 
     protected $fillable = [
-        'username',
-        'deleted',
-        'email',
-        'password',
-        'role',
-        'current_role',
-        'remember_token'
+        'username', 'email', 'password', 'role', 'current_role', 'remember_token',
+        'deleted', 'is_online', 'last_online',
+        'profile', 'guru_data', 'siswa_data',
+        'academic_records', 'attendances', 'schedule', 'password_resets',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password' => 'string',
+        'deleted' => 'boolean',
+        'is_online' => 'boolean',
+        'last_online' => 'datetime',
     ];
 
-    public function guru()
+    // Accessors
+    public function getProfileAttribute($value)
     {
-        return $this->hasOne(Guru::class, 'id_user', 'id');
-    }
-    public function siswa()
-    {
-        return $this->hasOne(Siswa::class, 'id_user', 'id');
-    }
-    public function hasRole(...$roles)
-    {
-        return in_array($this->current_role, $roles);
+        return $this->ensureArray($value);
     }
 
-
-    // untuk tampil data pengumuan tamu 
-    public function tamu_penguman()
+    public function getGuruDataAttribute($value)
     {
-        return hasMany(Tamu::class, 'Opsi_lanjutan', 'username');
+        return $this->ensureArray($value);
     }
 
-    // public function
+    public function getSiswaDataAttribute($value)
+    {
+        return $this->ensureArray($value);
+    }
 
-    public function absensis()
-{
-    return $this->hasMany(Absensi::class, 'id_user', 'id');
-}
+    public function getAcademicRecordsAttribute($value)
+    {
+        return $this->ensureArray($value);
+    }
 
+    public function getAttendancesAttribute($value)
+    {
+        return $this->ensureArray($value);
+    }
+
+    public function getScheduleAttribute($value)
+    {
+        return $this->ensureArray($value);
+    }
+
+    private function ensureArray($data)
+    {
+        if (is_null($data)) return [];
+        if (is_array($data)) return $data;
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        return [];
+    }
+
+    public function hasRole(...$roles): bool
+    {
+        $current = $this->current_role ?? $this->role;
+        return in_array($current, $roles);
+    }
 }

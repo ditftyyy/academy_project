@@ -6,152 +6,63 @@ use App\Models\MongoDB\User;
 use App\Models\MongoDB\Kelas;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str; // untuk slug
 
 class UserSeeder extends Seeder
 {
     /**
-     * ============================================
-     * CATATAN UNTUK PEMULA:
-     * Seeder ini membuat USER GURU & SISWA.
-     * 
-     * Di MongoDB, SEMUA user disimpan di
-     * SATU collection 'users' dengan field
-     * berbeda untuk setiap role:
-     * 
-     * - Guru: field 'guru_data'
-     * - Siswa: field 'siswa_data'
-     * 
-     * Semua info (profile, kelas, ortu) disimpan
-     * sebagai embedded document di 1 dokumen user.
-     * ============================================
+     * Generate username unik dari nama
      */
+    private function generateUsername($nama)
+    {
+        $base = Str::slug($nama, '.');
+        if (empty($base)) $base = 'siswa';
+        $username = $base;
+        $counter = 1;
+        while (User::where('username', $username)->exists()) {
+            $username = $base . $counter;
+            $counter++;
+        }
+        return $username;
+    }
+
     public function run(): void
     {
-        // ========== BUAT GURU ==========
-        $jumlahGuru = 20;
-        $guruIds = [];
-
-        for ($i = 0; $i < $jumlahGuru; $i++) {
-            $nip = random_int(10000, 59999) . '' . random_int(10000, 59999);
-            $nama = fake('id_ID')->name();
-
-            $guru = User::create([
-                'username' => fake('id_ID')->unique()->userName(),
-                'email' => fake('id_ID')->unique()->email(),
-                'password' => Hash::make('guru'),
-                'role' => 'guru',
-                'current_role' => 'guru',
+        // ========== BUAT ADMIN ROOT ==========
+        if (!User::where('username', 'root')->exists()) {
+            User::create([
+                'username' => 'root',
+                'email' => 'root@academy.id',
+                'password' => Hash::make('root'),
+                'role' => 'root,admin',
+                'current_role' => 'admin',
                 'deleted' => false,
                 'is_online' => false,
-                'profile' => [
-                    'nama_lengkap' => $nama,
-                    'jenis_kelamin' => fake('id_ID')->randomElement(['laki-laki', 'perempuan']),
-                    'agama' => fake('id_ID')->randomElement(['islam', 'kristen', 'hindu', 'konghucu', 'buddha']),
-                    'alamat' => fake('id_ID')->address(),
-                    'foto' => 'default_img.png',
-                ],
-                'guru_data' => [
-                    'nip' => $nip,
-                    'nama' => $nama,
-                    'no_telp' => fake('id_ID')->phoneNumber(),
-                    'jenis_kelamin' => fake('id_ID')->randomElement(['laki-laki', 'perempuan']),
-                    'agama' => fake('id_ID')->randomElement(['islam', 'kristen', 'hindu', 'konghucu', 'buddha']),
-                    'status_pegawai' => fake()->randomElement(['tetap', 'honorer', 'magang']),
-                    'tempat_lahir' => fake('id_ID')->city(),
-                    'tanggal_lahir' => fake('id_ID')->date('Y-m-d', 'now'),
-                    'foto' => 'default_img.png',
-                    'signature' => 'default_signature.png',
-                    'alamat' => fake('id_ID')->address(),
-                ],
+                'profile' => ['nama_lengkap' => 'Super Admin'],
                 'attendances' => [],
                 'schedule' => [],
             ]);
-
-            $guruIds[] = $guru->_id;
+            echo "  ✅ Root user created\n";
         }
 
-        echo "  ✅ {$jumlahGuru} guru dibuat\n";
-
-        // ========== BUAT KELAS & RUANG ==========
-        $this->call(KelasSeeder::class);
-
-        // ========== BUAT SISWA ==========
-        $kelass = Kelas::where('deleted', false)->get();
-        $siswaPerKelas = 2;
-        $angkatanTahun = now()->year;
-        $siswaCount = 0;
-
-        for ($a = 0; $a < 4; $a++) { // 4 angkatan
-            $tahunMasuk = $angkatanTahun - $a;
-            $angkatanNama = 'Angkatan ' . $tahunMasuk;
-
-            foreach ($kelass as $kelas) {
-                for ($i = 0; $i < $siswaPerKelas; $i++) {
-                    $nis = random_int(60000, 99999) . '' . random_int(100, 999);
-                    $nama = fake('id_ID')->name();
-                    $ayah = fake('id_ID')->name('male');
-
-                    User::create([
-                        'username' => fake('id_ID')->unique()->userName(),
-                        'email' => fake('id_ID')->unique()->email(),
-                        'password' => Hash::make('siswa'),
-                        'role' => 'siswa',
-                        'current_role' => 'siswa',
-                        'deleted' => false,
-                        'is_online' => false,
-                        'profile' => [
-                            'nama_lengkap' => $nama,
-                            'jenis_kelamin' => fake('id_ID')->randomElement(['laki-laki', 'perempuan']),
-                            'agama' => fake('id_ID')->randomElement(['islam', 'kristen', 'hindu', 'buddha', 'konghucu']),
-                            'alamat' => fake('id_ID')->address(),
-                            'no_telp' => fake('id_ID')->phoneNumber(),
-                            'foto' => 'default_img.png',
-                        ],
-                        'siswa_data' => [
-                            'nis' => $nis,
-                            'nisn' => random_int(60000, 99999) . '' . random_int(60000, 99999),
-                            'nik' => random_int(90000, 99999) . '' . random_int(90000, 99999) . '' . random_int(1, 1000),
-                            'nama' => $nama,
-                            'tempat_lahir' => fake('id_ID')->city(),
-                            'tanggal_lahir' => fake('id_ID')->date(),
-                            'jenis_kelamin' => fake('id_ID')->randomElement(['laki-laki', 'perempuan']),
-                            'agama' => fake('id_ID')->randomElement(['islam', 'kristen', 'hindu', 'buddha', 'konghucu']),
-                            'no_telp' => fake('id_ID')->phoneNumber(),
-                            'alamat' => fake('id_ID')->address(),
-                            'foto' => 'default_img.png',
-                            'status' => fake('id_ID')->randomElement(['bukan pindahan', 'pindahan']),
-                            'orang_tua' => [
-                                'nama_ayah' => $ayah,
-                                'nama_ibu' => fake('id_ID')->name('female'),
-                                'nama_wali' => $ayah,
-                            ],
-                            'kelas' => [
-                                'id' => $kelas->_id,
-                                'nama' => $kelas->nama_kelas,
-                            ],
-                            'angkatan' => [
-                                'nama' => $angkatanNama,
-                                'tahun_masuk' => $tahunMasuk,
-                            ],
-                            'asal_sekolah' => null,
-                            'tanggal_keluar' => null,
-                        ],
-                        'academic_records' => [],
-                        'attendances' => [],
-                        'schedule' => [],
-                    ]);
-
-                    $siswaCount++;
-                }
-            }
+        // ========== BUAT ADMIN BIASA ==========
+        if (!User::where('username', 'admin')->exists()) {
+            User::create([
+                'username' => 'admin',
+                'email' => 'admin@academy.id',
+                'password' => Hash::make('admin'),
+                'role' => 'admin',
+                'current_role' => 'admin',
+                'deleted' => false,
+                'profile' => ['nama_lengkap' => 'Administrator'],
+                'attendances' => [],
+                'schedule' => [],
+            ]);
+            echo "  ✅ Admin user created\n";
         }
-
-        echo "  ✅ {$siswaCount} siswa dibuat\n";
 
         // ========== BUAT GURU DEMO ==========
-        $guruDemoExists = User::where('username', 'guru')->exists();
-
-        if (!$guruDemoExists) {
+        if (!User::where('username', 'guru')->exists()) {
             User::create([
                 'username' => 'guru',
                 'email' => 'guru@academy.id',
@@ -159,70 +70,148 @@ class UserSeeder extends Seeder
                 'role' => 'guru',
                 'current_role' => 'guru',
                 'deleted' => false,
-                'is_online' => false,
-                'profile' => [
-                    'nama_lengkap' => 'Guru Demo',
-                    'jenis_kelamin' => 'laki-laki',
-                    'agama' => 'islam',
-                ],
-                'guru_data' => [
-                    'nip' => '199001012020011001',
-                    'nama' => 'Guru Demo',
-                    'status_pegawai' => 'tetap',
-                ],
+                'profile' => ['nama_lengkap' => 'Guru Demo'],
+                'guru_data' => ['nip' => '199001012020011001', 'nama' => 'Guru Demo'],
                 'attendances' => [],
                 'schedule' => [],
             ]);
-
-            echo "  ✅ Guru demo: guru / guru\n";
+            echo "  ✅ Guru demo created\n";
         }
 
         // ========== BUAT SISWA DEMO ==========
-        $siswaDemoExists = User::where('username', 'siswa')->exists();
+        if (!User::where('username', 'siswa.demo')->exists()) {
+            $kelas = Kelas::first();
+            if (!$kelas) {
+                $kelas = Kelas::create([
+                    'nama_kelas' => 'X IPA 1',
+                    'tingkat' => 'X',
+                    'jurusan' => 'IPA',
+                    'deleted' => false,
+                ]);
+            }
 
-        if (!$siswaDemoExists) {
+            $nama = 'Siswa Demo';
+            $username = $this->generateUsername($nama); // "siswa.demo"
+
             User::create([
-                'username' => 'siswa',
-                'email' => 'siswa@academy.id',
+                'username' => $username,
+                'email' => $username . '@student.academy.id',
                 'password' => Hash::make('siswa'),
                 'role' => 'siswa',
                 'current_role' => 'siswa',
                 'deleted' => false,
-                'is_online' => false,
-                'profile' => [
-                    'nama_lengkap' => 'Siswa Demo',
-                    'jenis_kelamin' => 'laki-laki',
-                    'agama' => 'islam',
-                ],
+                'profile' => ['nama_lengkap' => $nama],
                 'siswa_data' => [
                     'nis' => '2024001',
-                    'nisn' => '0001234567',
-                    'nama' => 'Siswa Demo',
-                    'kelas' => ['id' => '1', 'nama' => 'X IPA 1'],
+                    'nisn' => '1234567890',
+                    'nik' => '1234567890123456',
+                    'nama' => $nama,
+                    'jenis_kelamin' => 'laki-laki',
+                    'tempat_lahir' => 'Kota',
+                    'tanggal_lahir' => '2000-01-01',
+                    'agama' => 'islam',
+                    'no_telp' => '081234567890',
+                    'alamat' => 'Jl. Contoh No.1',
+                    'foto' => 'default_img.png',
                     'status' => 'bukan pindahan',
+                    'orang_tua' => [
+                        'nama_ayah' => 'Ayah Demo',
+                        'nama_ibu' => 'Ibu Demo',
+                        'nama_wali' => 'Wali Demo',
+                    ],
+                    'kelas' => [
+                        'id' => $kelas->_id,
+                        'nama' => $kelas->nama_kelas,
+                    ],
+                    'angkatan' => [
+                        'nama' => 'Angkatan ' . now()->year,
+                        'tahun_masuk' => now()->year,
+                    ],
+                    'tanggal_masuk' => now()->format('Y-m-d'),
                 ],
-                'academic_records' => [],
                 'attendances' => [],
                 'schedule' => [],
             ]);
-
-            echo "  ✅ Siswa demo: siswa / siswa\n";
+            echo "  ✅ Siswa demo created with username: $username\n";
         }
 
-        // ========== UPDATE SISWA LULUS ==========
-        // Siswa yang tahun masuknya >= 3 tahun lalu, status jadi 'lulus'
-        $siswasLama = User::where('role', 'siswa')
-            ->where('siswa_data.angkatan.tahun_masuk', '<=', now()->year - 3)
-            ->get();
+        // ========== BUAT GURU ACAK (5 orang) ==========
+        for ($i = 1; $i <= 5; $i++) {
+            $username = "guru$i";
+            if (!User::where('username', $username)->exists()) {
+                User::create([
+                    'username' => $username,
+                    'email' => "$username@academy.id",
+                    'password' => Hash::make('guru'),
+                    'role' => 'guru',
+                    'current_role' => 'guru',
+                    'profile' => ['nama_lengkap' => "Guru $i"],
+                    'guru_data' => ['nip' => "G$i", 'nama' => "Guru $i"],
+                    'attendances' => [],
+                    'schedule' => [],
+                ]);
+            }
+        }
+        echo "  ✅ 5 guru tambahan siap\n";
 
-        foreach ($siswasLama as $s) {
-            $siswaData = $s->siswa_data;
-            $siswaData['status'] = 'lulus';
-            $s->siswa_data = $siswaData;
-            $s->save();
+        // ========== BUAT SISWA ACAK (10 orang) dengan username dari nama ==========
+        $kelas = Kelas::first();
+        if (!$kelas) {
+            $kelas = Kelas::create([
+                'nama_kelas' => 'X IPA 1',
+                'tingkat' => 'X',
+                'jurusan' => 'IPA',
+                'deleted' => false,
+            ]);
         }
 
-        echo "  ✅ " . $siswasLama->count() . " siswa diupdate menjadi lulus\n";
-        echo "✅ User seeder selesai!\n";
+        for ($i = 1; $i <= 10; $i++) {
+            $nama = "Siswa $i";
+            $username = $this->generateUsername($nama);
+            if (!User::where('username', $username)->exists()) {
+                User::create([
+                    'username' => $username,
+                    'email' => $username . '@student.academy.id',
+                    'password' => Hash::make('siswa'),
+                    'role' => 'siswa',
+                    'current_role' => 'siswa',
+                    'profile' => ['nama_lengkap' => $nama],
+                    'siswa_data' => [
+                        'nis' => "S$i",
+                        'nisn' => "12345$i",
+                        'nik' => "1234567890$i",
+                        'nama' => $nama,
+                        'jenis_kelamin' => $i % 2 == 0 ? 'perempuan' : 'laki-laki',
+                        'tempat_lahir' => 'Jakarta',
+                        'tanggal_lahir' => '2000-01-01',
+                        'agama' => 'islam',
+                        'no_telp' => '0812345678' . $i,
+                        'alamat' => 'Jl. Contoh No.' . $i,
+                        'foto' => 'default_img.png',
+                        'status' => 'bukan pindahan',
+                        'orang_tua' => [
+                            'nama_ayah' => "Ayah $i",
+                            'nama_ibu' => "Ibu $i",
+                            'nama_wali' => "Wali $i",
+                        ],
+                        'kelas' => [
+                            'id' => $kelas->_id,
+                            'nama' => $kelas->nama_kelas,
+                        ],
+                        'angkatan' => [
+                            'nama' => 'Angkatan ' . now()->year,
+                            'tahun_masuk' => now()->year,
+                        ],
+                        'tanggal_masuk' => now()->format('Y-m-d'),
+                    ],
+                    'attendances' => [],
+                    'schedule' => [],
+                ]);
+                echo "  ✅ Siswa $username ($nama) created\n";
+            }
+        }
+        echo "  ✅ 10 siswa tambahan siap\n";
+
+        echo "✅ UserSeeder selesai!\n";
     }
 }
