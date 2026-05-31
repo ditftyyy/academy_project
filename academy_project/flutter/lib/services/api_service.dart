@@ -9,7 +9,8 @@ class ApiService {
   // GANTI NANTI DENGAN IP API TEMANMU
   // ====================================
 
- static const String baseUrl = "http://192.168.0.167:8000";
+  static const String baseUrl =
+      "http://192.168.1.7:8000";
 
   // ====================================
   // GET DATA
