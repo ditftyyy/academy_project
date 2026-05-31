@@ -25,18 +25,26 @@ class TamuController extends Controller
      * Ambil username berdasarkan role (untuk dropdown tujuan)
      */
     public function getUsernamesByRole($role)
-    {
-        $users = MongoUser::where('role', $role)->get();
+{
+    // Cari user berdasarkan role
+    $users = MongoUser::where('role', $role)->get();
+    
+    // Format data untuk dropdown
+    $formattedUsers = $users->map(function ($user) {
+        // Ambil nama dari guru_data, siswa_data, atau profile
+        $nama = $user->guru_data['nama'] 
+            ?? $user->siswa_data['nama'] 
+            ?? $user->profile['nama_lengkap'] 
+            ?? $user->username;
         
-        $formattedUsers = $users->map(function ($user) {
-            return [
-                'nama' => $user->nama_lengkap,
-                'username' => $user->username,
-            ];
-        });
-        
-        return response()->json($formattedUsers);
-    }
+        return [
+            'nama' => $nama,
+            'username' => $user->username,
+        ];
+    });
+    
+    return response()->json($formattedUsers);
+}
 
     /**
      * Halaman daftar tamu (untuk admin)
@@ -60,34 +68,21 @@ class TamuController extends Controller
      * Simpan tamu baru (dari admin)
      */
     public function kirim(Request $request)
-    {
-        // Cari user tujuan
-        $selectedUsername = $request->Opsi_Lanjutan;
-        $user = MongoUser::where('username', $selectedUsername)->first();
-        
-        // Catat tamu
-        MongoPengumuman::catatTamu([
-            'nama' => $request->namaTamu,
-            'alamat' => $request->alamatTamu,
-            'tujuan' => $request->Opsi,
-            'keterangan' => $request->keteranganTamu,
-        ]);
-        
-        // Update data_tambahan dengan info user tujuan
-        $tamu = MongoPengumuman::byType('tamu')
-            ->orderBy('created_at', 'desc')
-            ->first();
-        
-        if ($tamu && $user) {
-            $dataTambahan = $tamu->data_tambahan;
-            $dataTambahan['tujuan_username'] = $selectedUsername;
-            $dataTambahan['tujuan_nama'] = $user->nama_lengkap;
-            $tamu->update(['data_tambahan' => $dataTambahan]);
-        }
-
-        return redirect('/data-tamu')
-            ->with('toast_success', 'Data tamu berhasil disimpan');
-    }
+{
+    // Catat tamu tanpa tujuan (isi default)
+    MongoPengumuman::catatTamu([
+        'nama' => $request->namaTamu,
+        'alamat' => $request->alamatTamu,
+        'tujuan' => 'Umum',               // Nilai default
+        'keterangan' => $request->keteranganTamu,
+    ]);
+    
+    // (Opsional) Jika ingin tetap menyimpan data tambahan, bisa diabaikan
+    // karena tidak ada user tujuan yang dipilih.
+    
+    return redirect('/data-tamu')
+        ->with('toast_success', 'Data tamu berhasil disimpan');
+}
 
     /**
      * Halaman data tamu
@@ -126,32 +121,26 @@ class TamuController extends Controller
      * Update data tamu
      */
     public function update(Request $request, $id)
-    {
-        $tamu = MongoPengumuman::findOrFail($id);
-        
-        $dataTambahan = $tamu->data_tambahan ?? [];
-        $dataTambahan['nama_tamu'] = $request->namaTamu;
-        $dataTambahan['alamat'] = $request->alamatTamu;
-        $dataTambahan['tujuan'] = $request->Opsi;
-        $dataTambahan['keterangan'] = $request->keteranganTamu;
-        
-        // Update user tujuan
-        $selectedUsername = $request->Opsi_Lanjutan;
-        $user = MongoUser::where('username', $selectedUsername)->first();
-        
-        if ($user) {
-            $dataTambahan['tujuan_username'] = $selectedUsername;
-            $dataTambahan['tujuan_nama'] = $user->nama_lengkap;
-        }
-        
-        $tamu->update([
-            'message' => $request->keteranganTamu ?? '',
-            'data_tambahan' => $dataTambahan,
-        ]);
+{
+    $tamu = MongoPengumuman::findOrFail($id);
+    
+    $dataTambahan = $tamu->data_tambahan ?? [];
+    $dataTambahan['nama_tamu'] = $request->namaTamu;
+    $dataTambahan['alamat'] = $request->alamatTamu;
+    // Hapus atau beri default untuk 'tujuan' jika diperlukan
+    $dataTambahan['tujuan'] = $request->Opsi ?? $dataTambahan['tujuan'] ?? 'Umum';
+    $dataTambahan['keterangan'] = $request->keteranganTamu;
+    
+    // Tidak perlu mengupdate user tujuan karena field tidak ada
+    
+    $tamu->update([
+        'message' => $request->keteranganTamu ?? '',
+        'data_tambahan' => $dataTambahan,
+    ]);
 
-        return redirect('/data-tamu')
-            ->with('toast_success', 'Data tamu berhasil diupdate');
-    }
+    return redirect('/data-tamu')
+        ->with('toast_success', 'Data tamu berhasil diupdate');
+}
 
     /**
      * Hapus data tamu
@@ -187,29 +176,28 @@ class TamuController extends Controller
      * Simpan tamu (dari user biasa/resepsionis)
      */
     public function store(Request $request)
-    {
-        $selectedUsername = $request->Opsi_Lanjutan;
-        $user = MongoUser::where('username', $selectedUsername)->first();
-        
-        MongoPengumuman::catatTamu([
-            'nama' => $request->namaTamu,
-            'alamat' => $request->alamatTamu,
-            'tujuan' => $request->Opsi,
-            'keterangan' => $request->keteranganTamu,
-        ]);
+{
+    // Catat tamu tanpa memerlukan tujuan (isi default)
+    MongoPengumuman::catatTamu([
+        'nama' => $request->namaTamu,
+        'alamat' => $request->alamatTamu,
+        'tujuan' => 'Umum',               // nilai default (bisa diisi 'Tanpa tujuan')
+        'keterangan' => $request->keteranganTamu,
+    ]);
 
-        return redirect('/login')
-            ->with('toast_success', 'Data tamu berhasil disimpan');
-    }
+    // (Opsional) Tidak perlu mengupdate user tujuan karena tidak ada
+
+    return redirect('/login')
+        ->with('toast_success', 'Data tamu berhasil disimpan');
+}
 
     /**
-     * Update status tamu (diterima/selesai)
-     */
-    public function updateStatus(Request $request, $id)
-    {
-        $tamu = MongoPengumuman::findOrFail($id);
-        $tamu->updateStatusTamu($request->status);
-
-        return back()->with('toast_success', 'Status tamu berhasil diupdate');
-    }
+ * Update status tamu (diterima/selesai)
+ */
+public function updateStatus(Request $request, $id)
+{
+    $tamu = MongoPengumuman::findOrFail($id);
+    $tamu->updateStatusTamu($request->status);
+    return back()->with('toast_success', 'Status tamu berhasil diupdate');
+}
 }

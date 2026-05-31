@@ -8,6 +8,22 @@
     <h6 class="font-weight-bolder mb-0">Data Absensi Kelas</h6>
 @endsection
 
+@php
+    // Fungsi helper untuk parse tanggal (didefinisikan SEKALI di luar loop)
+    function safeParseDateAbsensi($dateStr) {
+        if (empty($dateStr)) return now();
+        if (is_numeric($dateStr)) {
+            $timestamp = (strlen((string)$dateStr) > 10) ? (int)($dateStr / 1000) : (int)$dateStr;
+            return \Carbon\Carbon::createFromTimestamp($timestamp);
+        }
+        try {
+            return \Carbon\Carbon::parse($dateStr);
+        } catch (\Exception $e) {
+            return now();
+        }
+    }
+@endphp
+
 @section('content')
     <div class="row">
         <div class="col-12">
@@ -53,15 +69,21 @@
                                 <tr>
                                     <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">No</th>
                                     <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Nama Siswa</th>
+                                    <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Tanggal</th>
                                     <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Status</th>
                                     <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($absensis as $absensi)
+                                    @php
+                                        $tanggalRaw = $absensi['created_at'] ?? $absensi['tanggal'] ?? null;
+                                        $tanggalObj = safeParseDateAbsensi($tanggalRaw);
+                                    @endphp
                                     <tr>
                                         <td class="text-center">{{ $loop->iteration }}</td>
                                         <td class="text-center">{{ $absensi['nama'] ?? '-' }}</td>
+                                        <td class="text-center">{{ $tanggalObj->format('d-m-Y H:i:s') }}</td>
                                         <td class="text-center">
                                             {{ ucfirst($absensi['status'] ?? '-') }}
                                             @if(($absensi['status'] ?? '') == 'izin' && !empty($absensi['keterangan']))

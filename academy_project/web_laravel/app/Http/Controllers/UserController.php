@@ -11,21 +11,10 @@ use App\Import\UsersImport;
 
 class UserController extends Controller
 {
-    /**
-     * ============================================
-     * CATATAN UNTUK PEMULA:
-     * Controller ini untuk ADMIN mengelola
-     * user management (role, password).
-     * ============================================
-     */
-
-    /**
-     * Halaman manajemen user
-     */
     public function index()
     {
-        $users = MongoUser::all();
-        
+        // Hanya tampilkan user yang belum dihapus (deleted = false)
+        $users = MongoUser::where('deleted', false)->get();
         return view('pages.administrasi.data-user.index', [
             'users' => $users,
             'title' => 'User Management'
@@ -33,113 +22,138 @@ class UserController extends Controller
     }
 
     /**
-     * Update role user
-     * 
-     * CARA KERJA:
-     * 1. Validasi roles yang dikirim
-     * 2. Cek apakah user punya role 'root'
-     * 3. Gabungkan roles baru
-     * 4. Update current_role jika berubah
+     * Update role user (hanya untuk role admin, guru, siswa)
      */
     public function update(Request $request, $id)
     {
-        $this->validate($request, [
+        $request->validate([
             'roles' => 'required|array',
+            'roles.*' => 'string|in:admin,guru,siswa', // hanya role yang diperbolehkan
         ]);
 
         $user = MongoUser::findOrFail($id);
-        
-        // Cek: hanya super admin yang bisa ubah root
-        $roleDariDB = explode(',', $user->role);
-        
-        if (in_array('root', $roleDariDB) && $user->_id != auth()->user()->_id) {
-            return back()->with('toast_error', "Anda tidak memiliki akses untuk mengubah data ini");
-        }
-        
-        // Filter role yang valid
-        $availableRoles = config('app.DB_user_roles', ['admin', 'guru', 'siswa', 'pegawai', 'tamu']);
-        $roleToSubmit = [];
-        
-        foreach ($request->roles as $role) {
-            if (in_array($role, $availableRoles)) {
-                $roleToSubmit[] = $role;
-            }
-        }
-        
-        // Pertahankan role 'root' jika sebelumnya ada
-        if (in_array('root', $roleDariDB) && !in_array('root', $roleToSubmit)) {
-            array_unshift($roleToSubmit, 'root');
-            if (!in_array('admin', $roleToSubmit)) {
-                $roleToSubmit[] = 'admin';
-            }
-        }
-        
-        if (count($roleToSubmit) <= 0) {
-            return back()->with('toast_error', "Role yang dimasukkan tidak ada yang valid");
-        }
-        
-        // Update
-        $updateData = [
-            'role' => implode(',', $roleToSubmit),
-        ];
-        
-        // Update current_role jika tidak termasuk dalam role baru
-        if (!in_array($user->current_role, $roleToSubmit)) {
-            $updateData['current_role'] = $roleToSubmit[0];
-        }
-        
-        $user->update($updateData);
 
-        return back()->with('toast_success', "User: {$user->username} berhasil diperbarui");
+        // Cek jika user adalah root, tidak boleh diubah dari sini
+        $currentRoles = explode(',', $user->role);
+        if (in_array('root', $currentRoles)) {
+            return back()->with('toast_error', 'Role root tidak dapat diubah melalui form ini.');
+        }
+
+        // Gabungkan role yang dipilih
+        $newRoles = $request->roles;
+        $newRoles = array_unique($newRoles);
+        if (empty($newRoles)) {
+            $newRoles = ['siswa'];
+        }
+
+        $newRoleString = implode(',', $newRoles);
+
+        // Update current_role
+        $currentRole = $user->current_role ?? $user->role;
+        if (!in_array($currentRole, $newRoles)) {
+            $user->current_role = $newRoles[0];
+        }
+
+        $user->role = $newRoleString;
+        $user->save();
+
+        return back()->with('toast_success', "Role user {$user->username} berhasil diperbarui.");
     }
 
     /**
-     * Reset password user
+     * Reset password user menjadi sama dengan username
      */
     public function reset(Request $request, $id)
     {
         $user = MongoUser::findOrFail($id);
-        
-        $user->update([
-            'password' => Hash::make($user->username),
-        ]);
+        $user->password = Hash::make($user->username);
+        $user->save();
 
         return redirect()->route('user_management')
-            ->with('toast_success', 'Password Berhasil di Reset');
+            ->with('toast_success', "Password user {$user->username} berhasil direset.");
     }
 
     /**
-     * Export user ke Excel
+ * Hapus user secara permanen (hard delete)
+ */
+public function destroy($id)
+{
+    $user = MongoUser::findOrFail($id);
+    
+    // Cegah penghapusan root
+    $roles = explode(',', $user->role);
+    if (in_array('root', $roles)) {
+        return redirect()->route('user_management')
+            ->with('toast_error', 'User root tidak dapat dihapus.');
+    }
+    
+    // Hapus file foto jika user adalah guru atau siswa
+    if ($user->role == 'guru') {
+        $foto = $user->guru_data['foto'] ?? $user->profile['foto'] ?? null;
+        if ($foto && $foto != 'default_img.png') {
+            $path = public_path('storage/guru/img/' . $foto);
+            if (File::exists($path)) File::delete($path);
+        }
+        // hapus signature jika ada
+        $signature = $user->guru_data['signature'] ?? null;
+        if ($signature && $signature != 'default_signature.png') {
+            $pathSig = public_path('storage/guru/signatures/' . $signature);
+            if (File::exists($pathSig)) File::delete($pathSig);
+        }
+    } elseif ($user->role == 'siswa') {
+        $foto = $user->siswa_data['foto'] ?? $user->profile['foto'] ?? null;
+        if ($foto && $foto != 'default_img.png') {
+            $path = public_path('storage/murid/img/' . $foto);
+            if (File::exists($path)) File::delete($path);
+        }
+    }
+    
+    // Hard delete
+    $user->delete();
+    
+    return redirect()->route('user_management')
+        ->with('toast_success', "User {$user->username} berhasil dihapus permanen.");
+}
+
+    /**
+     * Hapus user (soft delete)
      */
+    // public function destroy($id)
+    // {
+    //     $user = MongoUser::findOrFail($id);
+        
+    //     // Cegah penghapusan user root
+    //     $roles = explode(',', $user->role);
+    //     if (in_array('root', $roles)) {
+    //         return redirect()->route('user_management')
+    //             ->with('toast_error', 'User root tidak dapat dihapus.');
+    //     }
+        
+    //     $user->deleted = true;
+    //     $user->save();
+        
+    //     return redirect()->route('user_management')
+    //         ->with('toast_success', "User {$user->username} berhasil dihapus.");
+    // }
+
     public function export()
     {
         return Excel::download(new UsersExport, 'users.xlsx');
     }
 
-    /**
-     * Halaman import user
-     */
     public function showImportForm()
     {
-        return view('pages.administrasi.data-user.import_form', [
-            'title' => 'Import User'
-        ]);
+        return view('pages.administrasi.data-user.import_form', ['title' => 'Import User']);
     }
 
-    /**
-     * Import user dari Excel
-     */
     public function import(Request $request)
     {
         $request->validate([
             'excel_file' => 'required|file|mimes:xlsx,xls',
         ]);
-        
-        $file = $request->file('excel_file');
-        
-        Excel::import(new UsersImport(), $file);
 
-        return redirect()->back()
-            ->with('success', 'Data imported successfully.');
+        Excel::import(new UsersImport(), $request->file('excel_file'));
+
+        return redirect()->back()->with('success', 'Data user berhasil diimport.');
     }
 }

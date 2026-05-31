@@ -7,113 +7,91 @@ use Illuminate\Http\Request;
 
 class KalenderAkademikController extends Controller
 {
-    /**
-     * Halaman kalender akademik
-     */
-    public function index(Request $request)
+    public function index()
     {
         $akademik = MongoAkademik::aktif()->first();
         $events = [];
-        
-        if ($akademik && isset($akademik->kalender)) {
+
+        if ($akademik && !empty($akademik->kalender) && is_array($akademik->kalender)) {
             foreach ($akademik->kalender as $k) {
                 $color = ($k['status'] ?? '') === 'masuk' ? '#924ACE' : '#68B01A';
-                
                 $events[] = [
-                    'id' => $k['id'] ?? uniqid(),
-                    'title' => $k['title'] ?? '',
-                    'start' => $k['start_date'] ?? '',
-                    'end' => $k['end_date'] ?? '',
-                    'status' => $k['status'] ?? 'masuk',
-                    'color' => $color,
+                    'id'     => $k['id'] ?? uniqid(),
+                    'title'  => $k['title'] ?? '',
+                    'start'  => $k['start_date'] ?? '',
+                    'end'    => $k['end_date'] ?? '',
+                    'status' => $k['status'] ?? 'libur',
+                    'color'  => $color,
                 ];
             }
         }
-        
+
         return view('pages.akademik.data-kalender-akademik.kalender', [
             'events' => $events,
-            'title' => 'Kalender Akademik'
+            'title'  => 'Kalender Akademik'
         ]);
     }
 
-    /**
-     * Tambah event ke kalender
-     */
     public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|string',
+            'title'      => 'required|string|max:255',
             'start_date' => 'required|date',
-            'end_date' => 'required|date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
         ]);
-        
+
         $akademik = MongoAkademik::aktif()->first();
-        
         if (!$akademik) {
             return response()->json(['error' => 'Tidak ada tahun ajaran aktif'], 400);
         }
-        
+
+        // Generate id unik
+        $eventId = uniqid();
+
         $akademik->tambahEvent([
-            'title' => $request->title,
+            'id'         => $eventId,
+            'title'      => $request->title,
             'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
-            'status' => $request->status ?? 'libur',
+            'end_date'   => $request->end_date,
+            'status'     => $request->status ?? 'libur',
         ]);
-        
+
         return response()->json([
-            'id' => uniqid(),
+            'id'    => $eventId,
             'start' => $request->start_date,
-            'end' => $request->end_date,
+            'end'   => $request->end_date,
             'title' => $request->title,
             'color' => '#68B01A',
         ]);
     }
 
-    /**
-     * Update event kalender
-     */
     public function update(Request $request, $eventId)
     {
         $akademik = MongoAkademik::aktif()->first();
-        
         if (!$akademik) {
             return response()->json(['error' => 'Tidak ada tahun ajaran aktif'], 404);
         }
-        
-        $kalender = $akademik->kalender ?? [];
-        
-        foreach ($kalender as &$k) {
-            if (($k['id'] ?? '') === $eventId) {
-                $k['start_date'] = $request->start_date;
-                $k['end_date'] = $request->end_date;
-                break;
-            }
-        }
-        
-        $akademik->update(['kalender' => $kalender]);
-        
-        return response()->json('Event updated');
+
+        $success = $akademik->updateEvent($eventId, [
+            'start_date' => $request->start_date,
+            'end_date'   => $request->end_date,
+        ]);
+
+        return $success
+            ? response()->json('Event updated')
+            : response()->json(['error' => 'Event not found'], 404);
     }
 
-    /**
-     * Hapus event kalender
-     */
     public function destroy($eventId)
     {
         $akademik = MongoAkademik::aktif()->first();
-        
         if (!$akademik) {
             return response()->json(['error' => 'Tidak ada tahun ajaran aktif'], 404);
         }
-        
-        $kalender = $akademik->kalender ?? [];
-        
-        $kalender = array_filter($kalender, function($k) use ($eventId) {
-            return ($k['id'] ?? '') !== $eventId;
-        });
-        
-        $akademik->update(['kalender' => array_values($kalender)]);
-        
-        return response()->json($eventId);
+
+        $success = $akademik->hapusEvent($eventId);
+        return $success
+            ? response()->json($eventId)
+            : response()->json(['error' => 'Event not found'], 404);
     }
 }

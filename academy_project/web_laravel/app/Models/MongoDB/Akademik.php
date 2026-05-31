@@ -2,47 +2,36 @@
 
 namespace App\Models\MongoDB;
 
-use Jenssegers\Mongodb\Eloquent\Model;  // <-- GANTI INI
+use Jenssegers\Mongodb\Eloquent\Model;
 
 class Akademik extends Model
 {
     protected $connection = 'mongodb';
-    protected $collection = 'akademik';
+   protected $collection = 'akademik';
 
     protected $fillable = [
         'tahun_ajaran',
         'semester',
         'selected',
-        
-        // Kalender akademik
         'kalender',
-        
-        // Konfigurasi
         'konfigurasi',
     ];
 
     protected $casts = [
-        'kalender' => 'array',
+        'kalender'    => 'array',
         'konfigurasi' => 'array',
-        'selected' => 'boolean',
+        'selected'    => 'boolean',
     ];
 
     public $timestamps = true;
 
-    // ========== SCOPES ==========
-    
+    // Scope
     public function scopeAktif($query)
     {
         return $query->where('selected', true);
     }
 
-    public function scopeByTahunAjaran($query, $tahunAjaran)
-    {
-        return $query->where('tahun_ajaran', $tahunAjaran);
-    }
-
-    // ========== ACCESSORS ==========
-    
+    // Accessor
     public function getDisplayNameAttribute()
     {
         $semesterDisplay = $this->semester === 'ganjil' ? 'Ganjil' : 'Genap';
@@ -57,43 +46,95 @@ class Akademik extends Model
     }
 
     // ========== METHODS ==========
-    
+
     /**
-     * Menambah event kalender
+     * Tambah event kalender (aman untuk data awal berupa array)
      */
     public function tambahEvent(array $event): void
     {
-        $this->push('kalender', [
-            'title' => $event['title'],
+        // Pastikan kalender selalu array
+        $current = $this->kalender ?? [];
+        if (!is_array($current)) {
+            $current = [];
+        }
+
+        $current[] = [
+            'id'         => uniqid(),
+            'title'      => $event['title'],
             'start_date' => $event['start_date'],
-            'end_date' => $event['end_date'],
-            'status' => $event['status'] ?? 'masuk',
+            'end_date'   => $event['end_date'],
+            'status'     => $event['status'] ?? 'libur',
             'created_at' => now()->toDateTimeString(),
-        ]);
+        ];
+
+        $this->kalender = $current;
+        $this->save();
     }
 
     /**
-     * Cek apakah tanggal tertentu adalah hari libur
+     * Update event kalender
+     */
+    public function updateEvent(string $eventId, array $data): bool
+    {
+        $kalender = $this->kalender ?? [];
+        if (!is_array($kalender)) {
+            return false;
+        }
+
+        foreach ($kalender as &$event) {
+            if (($event['id'] ?? '') === $eventId) {
+                if (isset($data['start_date'])) $event['start_date'] = $data['start_date'];
+                if (isset($data['end_date']))   $event['end_date']   = $data['end_date'];
+                if (isset($data['title']))      $event['title']      = $data['title'];
+                if (isset($data['status']))     $event['status']     = $data['status'];
+                $this->kalender = $kalender;
+                $this->save();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Hapus event kalender
+     */
+    public function hapusEvent(string $eventId): bool
+    {
+        $kalender = $this->kalender ?? [];
+        if (!is_array($kalender)) {
+            return false;
+        }
+
+        $newKalender = array_filter($kalender, function($e) use ($eventId) {
+            return ($e['id'] ?? '') !== $eventId;
+        });
+
+        $this->kalender = array_values($newKalender);
+        $this->save();
+        return true;
+    }
+
+    /**
+     * Cek apakah tanggal tertentu libur
      */
     public function isHariLibur(string $tanggal): bool
     {
-        return collect($this->kalender ?? [])
+        $kalender = $this->kalender ?? [];
+        if (!is_array($kalender)) return false;
+
+        return collect($kalender)
             ->where('status', 'libur')
             ->contains(function ($event) use ($tanggal) {
-                return $tanggal >= $event['start_date'] && 
-                       $tanggal <= $event['end_date'];
+                return $tanggal >= $event['start_date'] && $tanggal <= $event['end_date'];
             });
     }
 
     /**
-     * Set sebagai tahun ajaran aktif
+     * Set tahun ajaran aktif
      */
     public static function setAktif(string $id): void
     {
-        // Nonaktifkan semua
         self::query()->update(['selected' => false]);
-        
-        // Aktifkan yang dipilih
         self::where('_id', $id)->update(['selected' => true]);
     }
 }
