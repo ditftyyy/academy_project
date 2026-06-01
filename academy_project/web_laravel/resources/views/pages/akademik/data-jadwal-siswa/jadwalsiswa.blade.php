@@ -21,6 +21,7 @@
                             @foreach ($jadwals as $jadwal)
                                 @php
                                     $hari = $jadwal['hari'] ?? '';
+                                    $statusHari = $jadwal['status'] ?? 'masuk';
                                     $mataPelajaran = $jadwal['mata_pelajaran'] ?? [];
                                 @endphp
                                 <div class="col-md-4" style="margin-bottom: 20px">
@@ -30,14 +31,18 @@
                                             <b style="color: white">{{ ucfirst($hari) }}{{ $hari == $hari_ini ? ' - Hari ini' : '' }}</b>
                                         </div>
                                         <div class="card-body">
-                                            @forelse ($mataPelajaran as $mp)
-                                                <div style="border-bottom: 1.5px dashed grey; padding-bottom: 10px; margin-top: 10px">
-                                                    <div>{{ $mp['jam_mulai'] }} - {{ $mp['jam_selesai'] }} <b>({{ $mp['ruang'] }})</b></div>
-                                                    <div><b>{{ $mp['mapel'] }}</b> <span>({{ $mp['guru'] }})</span></div>
-                                                </div>
-                                            @empty
+                                            @if ($statusHari == 'libur')
                                                 <p class="text-center text-muted">Libur / Tidak ada jadwal</p>
-                                            @endforelse
+                                            @else
+                                                @forelse ($mataPelajaran as $mp)
+                                                    <div style="border-bottom: 1.5px dashed grey; padding-bottom: 10px; margin-top: 10px">
+                                                        <div>{{ $mp['jam_mulai'] }} - {{ $mp['jam_selesai'] }} <b>({{ $mp['ruang'] }})</b></div>
+                                                        <div><b>{{ $mp['mapel'] }}</b> <span>({{ $mp['guru'] }})</span></div>
+                                                    </div>
+                                                @empty
+                                                    <p class="text-center text-muted">Tidak ada jadwal</p>
+                                                @endforelse
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
