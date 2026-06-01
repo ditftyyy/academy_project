@@ -1,13 +1,9 @@
 import '../models/user_model.dart';
-import '../utils/dummy_data.dart';
 
 class AuthService {
-
   final List<UserModel> users = [
-
     // SISWA
     UserModel(
-
       nama: "Clarisha",
 
       username: "siswa",
@@ -23,7 +19,6 @@ class AuthService {
 
     // GURU
     UserModel(
-
       nama: "Pak Budi",
 
       username: "guru",
@@ -34,27 +29,12 @@ class AuthService {
     ),
   ];
 
-  UserModel? login({
-
-    required String username,
-
-    required String password,
-  }) {
-
+  UserModel? login({required String username, required String password}) {
     try {
-
       return users.firstWhere(
-
-        (user) =>
-
-            user.username == username &&
-
-            user.password == password,
+        (user) => user.username == username && user.password == password,
       );
-    }
-
-    catch (e) {
-
+    } catch (e) {
       return null;
     }
   }
