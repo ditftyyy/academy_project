@@ -45,7 +45,7 @@ class Guru extends Model
     }
 
 
-    //untuk tamu
+    //ini untuk tamu
     public function tamu_penguman()
     {
         return $this->hasMany(Tamu::class, 'Opsi_lanjutan', 'username');
