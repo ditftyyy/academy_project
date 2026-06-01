@@ -43,8 +43,8 @@
                                 href="/administrasi/guru"><i class="material-icons opacity-10 mx-2">groups</i> Data Guru</a></li>
                         <li><a class="link-light rounded mb-1 {{ Request::is('administrasi/siswa*') ? 'bg-gradient-primary ' : '' }}"
                                 href="/administrasi/siswa"><i class="material-icons opacity-10 mx-2">groups</i> Data Siswa</a></li>
-                        <li><a class="link-light rounded mb-1 {{ Request::is('administrasi/usermoodle*') ? 'bg-gradient-primary ' : '' }}"
-                                href="/administrasi/usermoodle"><i class="material-icons opacity-10 mx-2">groups</i> Data User Moodle</a></li>
+                        <!-- <li><a class="link-light rounded mb-1 {{ Request::is('administrasi/usermoodle*') ? 'bg-gradient-primary ' : '' }}"
+                                href="/administrasi/usermoodle"><i class="material-icons opacity-10 mx-2">groups</i> Data User Moodle</a></li> -->
                         <li><a class="link-light rounded mb-1 {{ Request::is('akademik/mapel*') ? 'bg-gradient-primary ' : '' }}"
                                 href="/akademik/mapel"><i class="material-icons opacity-10 mx-2">task</i> Data Mapel</a></li>
                         <li><a class="link-light rounded mb-1 {{ Request::is('sarana/kelas*') ? 'bg-gradient-primary ' : '' }}"
@@ -87,8 +87,8 @@
                     <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
                         <li><a class="link-light rounded mb-1 {{ Request::is('akademik/absensi*') ? 'bg-gradient-primary ' : '' }}"
                                 href="/akademik/absensi/admin"><i class="material-icons opacity-10 mx-2">receipt_long</i> Presensi Admin</a></li>
-                        <li><a class="link-light rounded mb-1 {{ Request::is('data-nilai-moodle/*') ? 'bg-gradient-primary ' : '' }}"
-                                href="/data-nilai-moodle/course-moodle"><i class="material-icons opacity-10 mx-2">receipt_long</i> Nilai Moodle</a></li>
+                        <!-- <li><a class="link-light rounded mb-1 {{ Request::is('data-nilai-moodle/*') ? 'bg-gradient-primary ' : '' }}"
+                                href="/data-nilai-moodle/course-moodle"><i class="material-icons opacity-10 mx-2">receipt_long</i> Nilai Moodle</a></li> -->
                     </ul>
                 </div>
             </li>
@@ -126,12 +126,10 @@
                         <li><a class="link-light rounded mb-1 {{ Request::is('data-tamu*') ? 'bg-gradient-primary ' : '' }}"
                                 href="/data-tamu"><i class="material-icons opacity-10 mx-2">groups</i> Tamu</a></li>
                         <li><a class="link-light rounded mb-1 {{ Request::is('mou*') ? 'bg-gradient-primary ' : '' }}"
-                                href="/mou"><i class="material-icons opacity-10 mx-2">groups</i> Kerja Sama (MoU)</a></li>
+                                href="/mou"><i class="material-icons opacity-10 mx-2">groups</i> Kerja Sama</a></li>
                     </ul>
                 </div>
             </li>
-
-            {{-- Menu Elearning sudah dihapus --}}
 
             {{-- Testing API --}}
             <li class="mb-1">
@@ -152,13 +150,13 @@
             </li>
 
         {{-- ============================================ --}}
-        {{-- SIDEBAR GURU --}}
+        {{-- SIDEBAR GURU (diperbaiki) --}}
         {{-- ============================================ --}}
         @elseif (auth()->user()->hasRole('guru'))
             <li class="mb-1">
-                <a class="btn rounded text-white font-weight-bold {{ Request::is('akademik/jadwal-guru*') ? 'bg-gradient-primary ' : '' }}"
+                <a class="btn rounded text-white font-weight-bold {{ Request::is('akademik/jadwal-guru') ? 'bg-gradient-primary ' : '' }}"
                     style="text-transform: none; width: 100%;display: flex; align-items: center; column-gap:10px"
-                    href="/akademik/jadwal-guru/{{ auth()->user()->_id }}">
+                    href="/akademik/jadwal-guru">
                     <span class="material-symbols-outlined">event_note</span> Jadwal Mengajar
                 </a>
             </li>
@@ -169,8 +167,6 @@
                     <span class="material-symbols-outlined">school</span> Presensi
                 </a>
             </li>
-            {{-- Menu Elearning dihapus --}}
-
             {{-- Dataset Students --}}
             <li class="mb-1">
                 <a class="btn rounded text-white font-weight-bold {{ Request::is('dataset-students*') ? 'bg-gradient-primary ' : '' }}"
@@ -184,10 +180,13 @@
         {{-- SIDEBAR SISWA --}}
         {{-- ============================================ --}}
         @elseif (auth()->user()->hasRole('siswa'))
+            @php
+                $kelasId = auth()->user()->siswa_data['kelas']['id'] ?? null;
+            @endphp
             <li class="mb-1">
                 <a class="btn rounded text-white font-weight-bold {{ Request::is('akademik/jadwal-siswa*') ? 'bg-gradient-primary ' : '' }}"
                     style="text-transform: none; width: 100%;display: flex; align-items: center; column-gap:10px"
-                    href="/akademik/jadwal-siswa/{{ auth()->user()->siswa_data['kelas']['id'] ?? 'null' }}">
+                    href="{{ $kelasId ? '/akademik/jadwal-siswa/'.$kelasId : '#' }}">
                     <span class="material-symbols-outlined">event_note</span> Jadwal Pelajaran
                 </a>
             </li>
@@ -198,7 +197,6 @@
                     <span class="material-symbols-outlined">school</span> Presensi
                 </a>
             </li>
-            {{-- Menu Elearning dihapus --}}
         @endif
     </ul>
 </div>

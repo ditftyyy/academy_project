@@ -59,24 +59,24 @@
                                         <td class="text-center">
                                             {{-- Tombol Detail --}}
                                             <button type="button" data-bs-toggle="modal" data-bs-target="#detail-modal"
-                                                class="btn btn-info btn-sm rounded-circle"
-                                                style="margin: 2px 0;" title="Detail"
+                                                class="btn btn-info btn-sm rounded-circle" style="margin: 2px 0;" title="Detail"
                                                 onclick="showDetail('{{ $t->_id }}')">
                                                 <i class="fa fa-eye"></i>
                                             </button>
                                             {{-- Tombol Edit --}}
                                             <a href="/tamu-edit/{{ $t->_id }}"
-                                                class="btn btn-warning btn-sm rounded-circle"
-                                                style="margin: 2px 0;" title="Edit">
+                                                class="btn btn-warning btn-sm rounded-circle" style="margin: 2px 0;" title="Edit">
                                                 <i class="fa fa-edit"></i>
                                             </a>
-                                            {{-- Tombol Hapus --}}
-                                            <a href="/tamu-delete/{{ $t->_id }}"
-                                                onclick="return confirm('Anda yakin akan menghapus data ini?')"
-                                                class="btn btn-danger btn-sm rounded-circle"
-                                                style="margin: 2px 0;" title="Hapus">
-                                                <i class="fa fa-trash"></i>
-                                            </a>
+                                            {{-- Tombol Hapus (menggunakan form DELETE) --}}
+                                            <form action="/tamu-delete/{{ $t->_id }}" method="POST" style="display: inline-block;">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger btn-sm rounded-circle" style="margin: 2px 0;" title="Hapus"
+                                                    onclick="return confirm('Anda yakin akan menghapus data ini?')">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            </form>
                                             {{-- Tombol Update Status - hanya tampil jika status belum selesai --}}
                                             @if ($status !== 'pesan_telah_selesai')
                                                 <div class="btn-group mt-1" role="group">

@@ -1,13 +1,11 @@
 @extends('components.main')
-@section('title-content')
-    Kerja Sama MoU
-@endsection
+@section('title-content', 'Kerja Sama MoU')
 @section('breadcrumbs')
 <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
-        <li class="breadcrumb-item text-sm"><a class="opacity-5 text-dark" href="/dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item text-sm text-dark active" aria-current="page" ><a class="opacity-5 text-dark" href="/mou">Data Kerja Sama</a></li>
-    </ol>
-    <h6 class="font-weight-bolder mb-0">Kerja Sama</h6>
+    <li class="breadcrumb-item text-sm"><a class="opacity-5 text-dark" href="/dashboard">Dashboard</a></li>
+    <li class="breadcrumb-item text-sm"><a class="opacity-5 text-dark" href="/mou">Data Kerja Sama</a></li>
+</ol>
+<h6 class="font-weight-bolder mb-0">Kerja Sama</h6>
 @endsection
 
 @section('content')
@@ -20,163 +18,65 @@
                 </div>
             </div>
             <div class="card-body px-0 pb-2">
-              <main class="form-Kerjasama">
                 <form action="/add-mou" method="post" enctype="multipart/form-data" class="row g-3 py-1 px-4">
-                  @csrf
+                    @csrf
                     <div class="col-md-6">
-                        <label class="form-label" for="nama">Nama Mitra</label>
-                        <div class="input-group">
-                            <input
-                            type="text" name="nama_mitra" class="form-control rounded-3"
-                            id="nama_mitra" required
-                                value="{{ old('nama_mitra') }}" {{ $errors->has('nama_mitra') ? 'autofocus="true"' : '' }}
-                                >
-                        </div>
+                        <label class="form-label">Nama Mitra</label>
+                        <input type="text" name="nama_mitra" class="form-control" required value="{{ old('nama_mitra') }}">
+                        @error('nama_mitra') <span class="text-danger">{{ $message }}</span> @enderror
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="nama">PT Mitra</label>
-                        <div class="input-group">
-                            <input
-                            type="text" name="pt_mitra" class="form-control rounded-3"
-                            id="pt_mitra" required
-                                value="{{ old('pt_mitra') }}" {{ $errors->has('pt_mitra') ? 'autofocus="true"' : '' }}
-                                >
-                        </div>
+                        <label class="form-label">PT Mitra</label>
+                        <input type="text" name="pt_mitra" class="form-control" required value="{{ old('pt_mitra') }}">
+                        @error('pt_mitra') <span class="text-danger">{{ $message }}</span> @enderror
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="nama">Asal Mitra atau Instansi</label>
-                        <div class="input-group">
-                            <input
-                            type="text" name="asal_mitra" class="form-control rounded-3"
-                            id="asal_mitra" required
-                                value="{{ old('asal_mitra') }}" {{ $errors->has('asal_mitra') ? 'autofocus="true"' : '' }}
-                                >
-                        </div>
+                        <label class="form-label">Asal Mitra atau Instansi</label>
+                        <input type="text" name="asal_mitra" class="form-control" required value="{{ old('asal_mitra') }}">
+                        @error('asal_mitra') <span class="text-danger">{{ $message }}</span> @enderror
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="nama">Tujuan Mitra</label>
-                        <div class="input-group">
-                            <input
-                            type="text" name="tujuan_mitra" class="form-control rounded-3"
-                            id="tujuan_mitra" required
-                                value="{{ old('tujuan_mitra') }}" {{ $errors->has('tujuan_mitra') ? 'autofocus="true"' : '' }}
-                                >
-                        </div>
+                        <label class="form-label">Deskripsi Singkat Mitra</label>
+                        <textarea name="deskripsi_singkat_mitra" class="form-control" rows="3" required>{{ old('deskripsi_singkat_mitra') }}</textarea>
+                        @error('deskripsi_singkat_mitra') <span class="text-danger">{{ $message }}</span> @enderror
                     </div>
                     <div class="col-md-6">
-                        <label for="nama" class="form-label">Deskripsi Singkat Mitra</label>
-                        <div class="form-floating mb-3" >
-                            <textarea class="form-control" name="deskripsi_singkat_mitra" placeholder="Leave a comment here" id="floatingTextarea" style="height: 120px"
-                            id="deskripsi_singkat_mitra" required
-                                value="{{ old('deskripsi_singkat_mitra') }}" {{ $errors->has('deskripsi_singkat_mitra') ? 'autofocus="true"' : '' }}></textarea>
-                            <label for="floatingTextarea" style="color:darkgrey" > Jelaskan deskripsi singkat terkait kerja sama</label>
-                        </div>
-                    </div>
-
-                    {{-- <div class="col-md-6">
-
-                        <div class="row">
-                            <label for="formFile" class="form-label">File</label>
-                            <label class="form-label"> Keterangan : Silahkan upload file dalam bentuk doc, docx atau pdf </label>
-                        </div>
-                            <input class="form-control rounded-3 text-sm" name="file_mitra" type="file"
-                            id="file-input"
-                            required value="{{ old('file_mitra') }}" {{ $errors->has('file_mitra') ? 'autofocus="true"' : '' }}>
-                    </div> --}}
-                    <div class="col-md-6">
-                        <div class="row">
-                            <label for="formFile" class="form-label">File</label>
-                            <label class="form-label"> Keterangan : Silahkan upload file dalam bentuk doc, docx, atau pdf </label>
-                        </div>
-                        <input class="form-control rounded-3 text-sm" name="file_mitra" type="file"
-                            id="file-input" accept=".doc, .docx, .pdf"
-                            required value="{{ old('file_mitra') }}" {{ $errors->has('file_mitra') ? 'autofocus="true"' : '' }}>
+                        <label class="form-label">File</label>
+                        <small class="text-muted d-block">Keterangan : Silahkan upload file dalam bentuk doc, docx, atau pdf</small>
+                        <input class="form-control mt-1" name="file_mitra" type="file" accept=".doc,.docx,.pdf" required>
                         <span id="file-error" class="text-danger"></span>
+                        @error('file_mitra') <span class="text-danger">{{ $message }}</span> @enderror
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label" for="tanggal_mulai">Tanggal Mulai Kerjasama</label>
-                        <div class="input-group">
-                            <input type="date" name="tgl_mulai_kerjasama" class="form-control rounded-3"
-                            id='tgl_mulai_kerjasama'
-                                required value="{{ old('tgl_mulai_kerjasama') }}"
-                                {{ $errors->has('tgl_mulai_kerjasama') ? 'autofocus="true"' : '' }}>
-                        </div>
+                        <label class="form-label">Tanggal Mulai Kerjasama</label>
+                        <input type="date" name="tgl_mulai_kerjasama" class="form-control" id="tgl_mulai" required value="{{ old('tgl_mulai_kerjasama') }}">
+                        @error('tgl_mulai_kerjasama') <span class="text-danger">{{ $message }}</span> @enderror
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label" for="tanggal_berakhir">Tanggal Berakhir Kerjasama</label>
-                        <div class="input-group">
-                            <input type="date" name="tgl_berakhir_kerjasama" class="form-control rounded-3"
-                            id='tgl_berakhir_kerjasama'
-                                required value="{{ old('tgl_berakhir_kerjasama') }}"
-                                {{ $errors->has('tgl_berakhir_kerjasama') ? 'autofocus="true"' : '' }}>
-                        </div>
+                        <label class="form-label">Tanggal Berakhir Kerjasama</label>
+                        <input type="date" name="tgl_berakhir_kerjasama" class="form-control" id="tgl_berakhir" required value="{{ old('tgl_berakhir_kerjasama') }}">
+                        @error('tgl_berakhir_kerjasama') <span class="text-danger">{{ $message }}</span> @enderror
                     </div>
                     <div class="card-footer d-flex justify-content-end" style="gap: 10px">
-                        <a href="/mou" type="button" class="btn btn-danger text-sm rounded-3"
-                            style="margin-bottom: 0;">
-                            <i class="fa fa-arrow-left"></i> Kembali
-                        </a>
-                        <button type="submit" onclick="return confirm('Apakah anda yakin data sudah benar?')"
-                            class="btn btn-primary text-sm rounded-3 mr-2" style="margin-bottom: 0;">
-                            <i class="fa fa-save"></i> Simpan
-                        </button>
+                        <a href="/mou" class="btn btn-danger text-sm rounded-3"><i class="fa fa-arrow-left"></i> Kembali</a>
+                        <button type="submit" onclick="return confirm('Apakah anda yakin data sudah benar?')" class="btn btn-primary text-sm rounded-3"><i class="fa fa-save"></i> Simpan</button>
                     </div>
-                </div>
-                <div class="card-body py-1 px-4 pb-2">
-
-                </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Dapatkan elemen input tanggal
-    var tglMulaiInput = document.getElementById('tgl_mulai_kerjasama');
-    var tglBerakhirInput = document.getElementById('tgl_berakhir_kerjasama');
-
-    // Tambahkan event listener untuk memeriksa tanggal
-    tglMulaiInput.addEventListener('change', function () {
-        validateDates();
-    });
-
-    tglBerakhirInput.addEventListener('change', function () {
-        validateDates();
-    });
-
+    const tglMulai = document.getElementById('tgl_mulai');
+    const tglBerakhir = document.getElementById('tgl_berakhir');
     function validateDates() {
-        // Dapatkan tanggal yang dipilih
-        var tglMulai = new Date(tglMulaiInput.value);
-        var tglBerakhir = new Date(tglBerakhirInput.value);
-
-        // Periksa apakah Tanggal Mulai setelah atau sama dengan Tanggal Berakhir
-        if (tglMulai >= tglBerakhir) {
-            alert('Tanggal Mulai Kerjasama harus setelah Tanggal Berakhir Kerjasama.');
-            // Anda juga dapat mereset input tanggal atau menampilkan pesan kesalahan ke pengguna.
-
-            // reset tanggal
-            tglBerakhirInput.value='';
+        if (tglMulai.value && tglBerakhir.value && new Date(tglMulai.value) >= new Date(tglBerakhir.value)) {
+            alert('Tanggal Mulai harus sebelum Tanggal Berakhir!');
+            tglBerakhir.value = '';
         }
     }
-</script>
-
-<script>
-    document.getElementById('file-input').addEventListener('change', function() {
-        var allowedExtensions = ['.doc', '.docx', '.pdf'];
-        var input = this;
-        var file = input.files[0];
-        var fileName = file.name;
-
-        var isValid = allowedExtensions.some(function(ext) {
-            return fileName.endsWith(ext);
-        });
-
-        var errorSpan = document.getElementById('file-error');
-        if (!isValid) {
-            errorSpan.textContent = 'File harus dalam format doc, docx, atau pdf.';
-            input.value = '';  // Clear the input field
-        } else {
-            errorSpan.textContent = '';  // Clear any previous error message
-        }
-    });
+    tglMulai.addEventListener('change', validateDates);
+    tglBerakhir.addEventListener('change', validateDates);
 </script>
 @endsection

@@ -3,9 +3,9 @@
 @section('breadcrumbs')
     <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
         <li class="breadcrumb-item text-sm"><a class="opacity-5 text-dark" href="/dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item text-sm"><a aria-current="page">MOU</a></li>
+        <li class="breadcrumb-item text-sm"><a aria-current="page">Kerja Sama</a></li>
     </ol>
-    <h6 class="font-weight-bolder mb-0">Data MOU</h6>
+    <h6 class="font-weight-bolder mb-0">Data Kerja Sama</h6>
 @endsection
 @section('content')
     <div class="row">
@@ -22,8 +22,14 @@
                         <table id="example" class="table align-items-center mb-0">
                             <thead>
                                 <tr>
-                                    <th class="text-center">No</th><th class="text-center">Nama Mitra</th><th class="text-center">Asal Mitra</th><th class="text-center">Deskripsi</th>
-                                    <th class="text-center">Mulai</th><th class="text-center">Berakhir</th><th class="text-center">PT Mitra</th><th class="text-center">Tujuan</th><th class="text-center">Aksi</th>
+                                    <th class="text-center">No</th>
+                                    <th class="text-center">Nama Mitra</th>
+                                    <th class="text-center">Asal Mitra</th>
+                                    <th class="text-center">Deskripsi</th>
+                                    <th class="text-center">Mulai</th>
+                                    <th class="text-center">Berakhir</th>
+                                    <th class="text-center">PT Mitra</th>
+                                    <th class="text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -37,15 +43,18 @@
                                         <td class="text-center">{{ $d['tanggal_mulai'] ?? '' }}</td>
                                         <td class="text-center">{{ $d['tanggal_berakhir'] ?? '' }}</td>
                                         <td class="text-center">{{ $d['pt_mitra'] ?? '' }}</td>
-                                        <td class="text-center">{{ $d['tujuan_mitra'] ?? '' }}</td>
                                         <td class="text-center">
                                             <button class="btn btn-info btn-sm rounded-circle" data-bs-toggle="modal" data-bs-target="#detailModal{{ $loop->index }}"><i class="fa fa-eye"></i></button>
                                             <a href="/edit-mou/{{ $m->_id }}" class="btn btn-warning btn-sm rounded-circle"><i class="fa fa-edit"></i></a>
-                                            <a href="/delete-mou/{{ $m->_id }}" class="btn btn-danger btn-sm rounded-circle" onclick="return confirm('Yakin?')"><i class="fa fa-trash"></i></a>
+                                            <form action="/delete-mou/{{ $m->_id }}" method="POST" style="display: inline-block;">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger btn-sm rounded-circle" onclick="return confirm('Yakin hapus data ini?')"><i class="fa fa-trash"></i></button>
+                                            </form>
                                         </td>
                                     </tr>
-                                    {{-- Modal Detail per MOU --}}
-                                    <div class="modal fade" id="detailModal{{ $loop->index }}" tabindex="-1" aria-hidden="true">
+                                    {{-- Modal Detail --}}
+                                    <div class="modal fade" id="detailModal{{ $loop->index }}" tabindex="-1">
                                         <div class="modal-dialog modal-lg">
                                             <div class="modal-content">
                                                 <div class="modal-header bg-primary"><h5 class="modal-title text-white">Detail Kerjasama</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
@@ -57,11 +66,10 @@
                                                         <li class="list-group-item"><strong>Mulai:</strong> {{ $d['tanggal_mulai'] ?? '' }}</li>
                                                         <li class="list-group-item"><strong>Berakhir:</strong> {{ $d['tanggal_berakhir'] ?? '' }}</li>
                                                         <li class="list-group-item"><strong>PT Mitra:</strong> {{ $d['pt_mitra'] ?? '' }}</li>
-                                                        <li class="list-group-item"><strong>Tujuan:</strong> {{ $d['tujuan_mitra'] ?? '' }}</li>
                                                         <li class="list-group-item"><strong>File:</strong> 
                                                             @if(!empty($d['file']))
                                                                 <a href="{{ asset('storage/kerjasama/file/'.$d['file']) }}" target="_blank">{{ $d['original_name_file'] ?? 'Lihat' }}</a>
-                                                            @endif
+                                                            @else - @endif
                                                         </li>
                                                     </ul>
                                                 </div>
@@ -70,7 +78,7 @@
                                         </div>
                                     </div>
                                 @empty
-                                    <tr><td colspan="9" class="text-center">Tidak ada data.</td></tr>
+                                    <tr><td colspan="8" class="text-center">Tidak ada data.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
