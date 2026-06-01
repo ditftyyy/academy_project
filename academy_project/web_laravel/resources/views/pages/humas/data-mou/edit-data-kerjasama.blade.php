@@ -1,8 +1,7 @@
 @extends('components.main')
 @section('breadcrumbs')
     <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
-        <li class="breadcrumb-item text-sm"><a class="opacity-5 text-dark" href="/mou">Kerjasama</a>
-        </li>
+        <li class="breadcrumb-item text-sm"><a class="opacity-5 text-dark" href="/mou">Kerjasama</a></li>
         <li class="breadcrumb-item text-sm text-dark active" aria-current="page">Edit</li>
     </ol>
     <h6 class="font-weight-bolder mb-0">Data Kerjasama</h6>
@@ -17,143 +16,75 @@
                     </div>
                 </div>
                 @php
-                    // $alamat_array = explode(',', $guru->alamat);
-                    // while (count($alamat_array) < 5) {
-                    //     $alamat_array[] = '';
-                    // }
-                    $form_input = [
-                        'id' => $mou->_id,
-                        'name' => $mou->nama_mitra,
-                        'asal' => $mou->asal_mitra,
-                        'tujuan' => $mou->Deskripsi_singkat_mitra,
-                        'tanggal_mulai_kerjasama'=>$mou->tanggal_mulai_kerjasama,
-                        'tanggal_berakhir_kerjasama'=>$mou->tanggal_berakhir_kerjasama,
-                        'PT_Mitra'=>$mou->PT_Mitra,
-                        'tujuan_mitra' => $mou->tujuan_mitra,
-                        'file_mitra' => $mou->file
-                       
-                    ];
-                    foreach ($form_input as $key => $input_value) {
-                        if (old($key) && old($key) != '') {
-                            $form_input[$key] = old($key);
-                        }
-                    }
+                    $dataTambahan = $mou->data_tambahan ?? [];
                 @endphp
                 <div class="card-body px-0 pb-2">
-                    <form action="/edit-mou/{{ $mou->id }}" class="row g-3 py-1 px-4" method="post"
-                        enctype="multipart/form-data">
+                    <form action="/edit-mou/{{ $mou->_id }}" class="row g-3 py-1 px-4" method="post" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
 
                         <div class="col-md-6">
-                            <label class="form-label" for="nama">Nama Mitra</label>
-                            <div class="input-group">
-                                <input type="text" name="nama_mitra" class="form-control" id="nama_mitra" required 
-                                value="{{ $mou->nama_mitra }}" {{ $errors->has('nama_mitra') ? 'autofocus="true"' : '' }} 
-                                readonly>
-                            </div>
+                            <label class="form-label" for="nama_mitra">Nama Mitra</label>
+                            <input type="text" name="nama_mitra" class="form-control" id="nama_mitra" required 
+                                   value="{{ old('nama_mitra', $dataTambahan['nama_mitra'] ?? '') }}">
+                            @error('nama_mitra') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label" for="asal">Asal Mitra atau Instansi</label>
-                            <div class="input-group">
-                                <input type="text" name="asal_mitra" class="form-control rounded-3" id="asal_mitra" required
-                                    value="{{ $mou->asal_mitra }}"
-                                    {{ $errors->has('asal_mitra') ? 'autofocus="true"' : '' }}
-                                    readonly>
-                            </div>
-                            @if ($errors->has('asal_mitra'))
-                                <span class="text-danger">{{ $errors->first('asal_mitra') }}</span>
-                            @endif
+                            <label class="form-label" for="asal_mitra">Asal Mitra atau Instansi</label>
+                            <input type="text" name="asal_mitra" class="form-control" id="asal_mitra" required
+                                   value="{{ old('asal_mitra', $dataTambahan['asal_mitra'] ?? '') }}">
+                            @error('asal_mitra') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label" for="deskripsi_singkat_mitra">Deskripsi singkat Mitra</label>
-                            <div class="input-group">
-                                <input type="text" name="deskripsi_singkat_mitra" class="form-control rounded-3" id="deskripsi_singkat_mitra" required
-                                    value="{{ $mou->Deskripsi_singkat_mitra }}"
-                                    {{ $errors->has('Deskripsi_singkat_mitra') ? 'autofocus="true"' : '' }}
-                                    readonly>
-                            </div>
-                            @if ($errors->has('Deskripsi_singkat_mitra'))
-                                <span class="text-danger">{{ $errors->first('Deskripsi_singkat_mitra') }}</span>
-                            @endif
+                            <textarea name="deskripsi_singkat_mitra" class="form-control" rows="3" required>{{ old('deskripsi_singkat_mitra', $mou->message ?? '') }}</textarea>
+                            @error('deskripsi_singkat_mitra') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label" for="tanggal_mulai_kerjasama">Tanggal Mulai Kerjasama</label>
-                            <div class="input-group">
-                                <input type="date" name="tgl_mulai_kerjasama" class="form-control rounded-3" id="tgl_mulai" required
-                                    value="{{ $mou->tanggal_mulai_kerjasama }}"
-                                    {{ $errors->has('tanggal_mulai_kerjasama') ? 'autofocus="true"' : '' }}
-                                    readonly>
-                            </div>
-                            @if ($errors->has('tanggal_mulai_kerjasama'))
-                                <span class="text-danger">{{ $errors->first('tanggal_mulai_kerjasama') }}</span>
-                            @endif
+                            <label class="form-label" for="tgl_mulai_kerjasama">Tanggal Mulai Kerjasama</label>
+                            <input type="date" name="tgl_mulai_kerjasama" class="form-control" id="tgl_mulai" required
+                                   value="{{ old('tgl_mulai_kerjasama', $dataTambahan['tanggal_mulai'] ?? '') }}">
+                            @error('tgl_mulai_kerjasama') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label" for="tanggal-berakhir_kerjasama">Tanggal Berakhir Kerjasama</label>
-                            <div class="input-group">
-                                <input type="date" name="tgl_berakhir_kerjasama" class="form-control rounded-3" id="tgl_berakhir" required
-                                    value="{{ $mou->tanggal_berakhir_kerjasama }}"
-                                    {{ $errors->has('tanggal-berakhir_kerjasama') ? 'autofocus="true"' : '' }}
-                                    >
-                            </div>
-                            @if ($errors->has('tanggal_mulai_kerjasama'))
-                                <span class="text-danger">{{ $errors->first('tanggal_mulai_kerjasama') }}</span>
-                            @endif
+                            <label class="form-label" for="tgl_berakhir_kerjasama">Tanggal Berakhir Kerjasama</label>
+                            <input type="date" name="tgl_berakhir_kerjasama" class="form-control" id="tgl_berakhir" required
+                                   value="{{ old('tgl_berakhir_kerjasama', $dataTambahan['tanggal_berakhir'] ?? '') }}">
+                            @error('tgl_berakhir_kerjasama') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label" for="asal">PT Mitra</label>
-                            <div class="input-group">
-                                <input type="text" name="pt_mitra" class="form-control rounded-3" id="pt_mitra" required
-                                    value="{{ $mou->PT_Mitra }}"
-                                    {{ $errors->has('PT_Mitra') ? 'autofocus="true"' : '' }}
-                                    readonly>
-                            </div>
-                            @if ($errors->has('pt_mitra'))
-                                <span class="text-danger">{{ $errors->first('pt_mitra') }}</span>
-                            @endif
+                            <label class="form-label" for="pt_mitra">PT Mitra</label>
+                            <input type="text" name="pt_mitra" class="form-control" id="pt_mitra" required
+                                   value="{{ old('pt_mitra', $dataTambahan['pt_mitra'] ?? '') }}">
+                            @error('pt_mitra') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
 
-                        <div class="col-md-6">
-                            <div class="row">
-                                <label for="formFile" class="form-label">File</label>
-                                <label class="form-label"> Keterangan  </label>
-                                <label class="form-label"> - Jika terdapat perubahan pada file sebelumnya silahkan upload ulang file  </label>
-                                <label class="form-label"> - Silahkan upload file dalam bentuk doc, docx atau pdf </label>
+                        <div class="col-md-12">
+                            <label class="form-label">File</label>
+                            @if(!empty($dataTambahan['file']))
+                                <div class="mb-2">
+                                    <a href="{{ asset('storage/kerjasama/file/'.$dataTambahan['file']) }}" target="_blank" class="btn btn-sm btn-info">
+                                        {{ $dataTambahan['original_name_file'] ?? 'Lihat File Saat Ini' }}
+                                    </a>
+                                </div>
+                            @endif
+                            <div class="text-muted small">
+                                <p class="mb-0">Keterangan:</p>
+                                <p class="mb-0">- Jika terdapat perubahan pada file sebelumnya silahkan upload ulang file</p>
+                                <p class="mb-0">- Silahkan upload file dalam bentuk doc, docx atau pdf</p>
                             </div>
-                                <input class="form-control rounded-3 text-sm" name="file_mitra" type="file"
-                                id="file-input" 
-                                required value="{{ old('file_mitra') }}" {{ $errors->has('file_mitra') ? 'autofocus="true"' : '' }}>
-                            {{-- @if ($errors->has('file_mitra'))
-                                <span class="text-danger">{{ $errors->first('file_mitra') }}</span>
-                            @endif --}}
+                            <input class="form-control mt-2" name="file_mitra" type="file" accept=".doc,.docx,.pdf">
+                            @error('file_mitra') <span class="text-danger">{{ $message }}</span> @enderror
                         </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label" for="tujuan_mitra">Tujuan Mitra</label>
-                            <div class="input-group">
-                                <input type="text" name="tujuan_mitra" class="form-control rounded-3" id="tujuan_mitra"
-                                    value="{{ $mou->tujuan_mitra }}"
-                                    {{ $errors->has('tujuan_mitra') ? 'autofocus="true"' : '' }}>
-                            </div>
-                            @if ($errors->has('tujuan_mitra'))
-                                <span class="text-danger">{{ $errors->first('tujuan_mitra') }}</span>
-                            @endif
-                        </div>
                         <div class="card-footer d-flex justify-content-end" style="gap: 10px">
-                            <a href="/mou" type="button" class="btn btn-danger text-sm rounded-3"
-                                style="margin-bottom: 0;">
-                                <i class="fa fa-arrow-left"></i> Kembali
-                            </a>
-                            <button type="submit" onclick="return confirm('Apakah anda yakin data sudah benar?')"
-                                class="btn btn-primary text-sm rounded-3 mr-2" style="margin-bottom: 0;">
-                                <i class="fa fa-save"></i> Simpan
-                            </button>
+                            <a href="/mou" class="btn btn-danger text-sm rounded-3"><i class="fa fa-arrow-left"></i> Kembali</a>
+                            <button type="submit" onclick="return confirm('Apakah anda yakin data sudah benar?')" class="btn btn-primary text-sm rounded-3"><i class="fa fa-save"></i> Simpan</button>
                         </div>
                     </form>
                 </div>
@@ -161,50 +92,25 @@
         </div>
     </div>
 
-    {{-- <script>
-        function hanyaAngka(evt) {
-            var charCode = (evt.which) ? evt.which : event.keyCode
-            if (charCode > 31 && (charCode < 48 || charCode > 57))
-
-                return false;
-            return true;
-        }
-    </script> --}}
     <script>
-        // Dapatkan elemen input tanggal
         var tglMulaiInput = document.getElementById('tgl_mulai');
         var tglBerakhirInput = document.getElementById('tgl_berakhir');
-
-        // Simpan nilai tanggal terakhir
         var lastValidTglMulai = tglMulaiInput.value;
         var lastValidTglBerakhir = tglBerakhirInput.value;
 
-        // Tambahkan event listener untuk memeriksa tanggal
-        tglMulaiInput.addEventListener('change', function () {
-            validateDates();
-        });
-
-        tglBerakhirInput.addEventListener('change', function () {
-            validateDates();
-        });
+        tglMulaiInput.addEventListener('change', validateDates);
+        tglBerakhirInput.addEventListener('change', validateDates);
 
         function validateDates() {
-            // Dapatkan tanggal yang dipilih
             var tglMulai = new Date(tglMulaiInput.value);
             var tglBerakhir = new Date(tglBerakhirInput.value);
-
-            // Periksa apakah Tanggal Mulai setelah atau sama dengan Tanggal Berakhir
             if (tglMulai >= tglBerakhir) {
                 alert('Tanggal Mulai Kerjasama harus sebelum Tanggal Berakhir Kerjasama.');
-
-                // Kembalikan nilai Tanggal Berakhir ke nilai awal
                 tglBerakhirInput.value = lastValidTglBerakhir;
             } else {
-                // Jika tanggal valid, simpan nilai sebagai tanggal terakhir yang valid
                 lastValidTglMulai = tglMulaiInput.value;
                 lastValidTglBerakhir = tglBerakhirInput.value;
             }
         }
-     </script>
+    </script>
 @endsection
-{{-- footer --}}
