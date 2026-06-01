@@ -10,10 +10,39 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\File;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\UsersExportGuru;
+use Illuminate\Support\Str;
 
 class GuruController extends Controller
 {
     use MongoHelper;
+
+    /**
+     * Generate username unik dari nama guru
+     */
+    private function generateUsernameFromName($nama)
+    {
+        // Ubah nama menjadi slug (lowercase, tanpa spasi, hanya huruf/angka)
+        $base = Str::slug($nama, '.');
+        // Jika kosong, gunakan 'guru'
+        if (empty($base)) $base = 'guru';
+        
+        // Cek apakah username sudah ada
+        $username = $base;
+        $counter = 1;
+        while (MongoUser::where('username', $username)->exists()) {
+            $username = $base . $counter;
+            $counter++;
+        }
+        return $username;
+    }
+
+    /**
+     * Generate email berdasarkan username
+     */
+    private function generateEmailFromUsername($username)
+    {
+        return $username . '@guru.academy.id';
+    }
 
     /**
      * Update absensi guru
@@ -137,7 +166,7 @@ class GuruController extends Controller
 
         $this->validate($request, [
             'nip' => 'required|unique:users,guru_data.nip',
-            'nama' => 'regex:/^[a-zA-Z\s.,]+$/',
+            'nama' => 'required|regex:/^[a-zA-Z\s.,]+$/',
             'jenis_kelamin' => 'required',
             'no_telp' => 'required|unique:users,guru_data.no_telp',
             'agama' => 'required',
@@ -172,10 +201,14 @@ class GuruController extends Controller
             );
         }
 
+        // 🔥 GENERATE USERNAME DARI NAMA (bukan NIP)
+        $username = $this->generateUsernameFromName($request->nama);
+        $email = $this->generateEmailFromUsername($username);
+
         // Buat user guru di MongoDB
         $guru = MongoUser::create([
-            'username' => $this->generateUsername($request->nip),
-            'email' => $this->generateEmail($request->nip, 'guru'),
+            'username' => $username,
+            'email' => $email,
             'password' => Hash::make($request->nip),
             'role' => 'guru',
             'deleted' => false,
@@ -238,7 +271,7 @@ class GuruController extends Controller
         ];
 
         $this->validate($request, [
-            'nama' => 'regex:/^[a-zA-Z\s.,]+$/',
+            'nama' => 'required|regex:/^[a-zA-Z\s.,]+$/',
             'alamat' => 'required|array',
             'status' => 'required',
         ], $messages);
@@ -266,16 +299,44 @@ class GuruController extends Controller
     }
 
     /**
+ * Hapus guru secara permanen (hard delete)
+ */
+public function destroy($id)
+{
+    $guru = MongoUser::findOrFail($id);
+    
+    // Hapus foto jika ada dan bukan default
+    $foto = $guru->guru_data['foto'] ?? $guru->profile['foto'] ?? null;
+    if ($foto && $foto != 'default_img.png') {
+        $pathFoto = public_path('storage/guru/img/' . $foto);
+        if (File::exists($pathFoto)) File::delete($pathFoto);
+    }
+    
+    // Hapus signature jika ada dan bukan default
+    $signature = $guru->guru_data['signature'] ?? null;
+    if ($signature && $signature != 'default_signature.png') {
+        $pathSig = public_path('storage/guru/signatures/' . $signature);
+        if (File::exists($pathSig)) File::delete($pathSig);
+    }
+    
+    // Hard delete
+    $guru->delete();
+    
+    return redirect('/administrasi/guru')
+        ->with('toast_success', 'Data Guru Berhasil di Hapus Permanen');
+}
+
+    /**
      * Hapus guru (soft delete)
      */
-    public function destroy($id)
-    {
-        $guru = MongoUser::findOrFail($id);
-        $guru->update(['deleted' => true]);
+    // public function destroy($id)
+    // {
+    //     $guru = MongoUser::findOrFail($id);
+    //     $guru->update(['deleted' => true]);
 
-        return redirect('/administrasi/guru')
-            ->with('toast_success', 'Data Guru Berhasil di Hapus');
-    }
+    //     return redirect('/administrasi/guru')
+    //         ->with('toast_success', 'Data Guru Berhasil di Hapus');
+    // }
 
     /**
      * Export guru ke Excel

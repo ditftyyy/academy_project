@@ -9,23 +9,12 @@ use Illuminate\Database\Seeder;
 
 class KelasSeeder extends Seeder
 {
-    /**
-     * ============================================
-     * CATATAN UNTUK PEMULA:
-     * Seeder ini membuat data KELAS dan RUANGAN.
-     * 
-     * Di MongoDB:
-     * - Kelas disimpan di collection 'kelas'
-     * - Ruang disimpan di collection 'ruang'
-     * - Wali kelas diambil dari collection 'users'
-     * ============================================
-     */
     public function run(): void
     {
         $tingkats = ['X', 'XI', 'XII'];
         $jurusans = [
-            'IPA' => 2,  // 2 kelas IPA
-            'IPS' => 3,  // 3 kelas IPS
+            'IPA' => 2,  // 2 kelas IPA per tingkat
+            'IPS' => 3,  // 3 kelas IPS per tingkat
         ];
 
         $gurus = User::where('role', 'guru')->get();
@@ -36,14 +25,21 @@ class KelasSeeder extends Seeder
                 foreach ($tingkats as $tingkat) {
                     $namaKelas = strtoupper($tingkat . ' ' . $jurusan . ' ' . $i);
 
-                    // Cek apakah kelas sudah ada
-                    $exists = Kelas::where('nama_kelas', $namaKelas)->exists();
+                    // Cek apakah kelas sudah ada (case-insensitive)
+                    $kelasExist = Kelas::whereRaw([
+                        '$expr' => [
+                            '$eq' => [
+                                ['$toLower' => '$nama_kelas'],
+                                strtolower($namaKelas)
+                            ]
+                        ]
+                    ])->first();
 
-                    if (!$exists) {
-                        // Ambil guru untuk wali kelas
+                    if (!$kelasExist) {
+                        // Ambil guru untuk wali kelas (rotasi)
                         $waliKelas = null;
-                        if (isset($gurus[$guruIndex])) {
-                            $guru = $gurus[$guruIndex];
+                        if ($gurus->count() > 0 && isset($gurus[$guruIndex % $gurus->count()])) {
+                            $guru = $gurus[$guruIndex % $gurus->count()];
                             $waliKelas = [
                                 'id' => $guru->_id,
                                 'nip' => $guru->guru_data['nip'] ?? '',
@@ -52,28 +48,40 @@ class KelasSeeder extends Seeder
                             $guruIndex++;
                         }
 
+                        // Generate jadwal kosong
+                        $jadwal = [];
+                        foreach (['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'] as $hari) {
+                            $jadwal[] = [
+                                'hari' => $hari,
+                                'status' => 'libur',
+                                'mata_pelajaran' => [],
+                            ];
+                        }
+
                         Kelas::create([
                             'nama_kelas' => $namaKelas,
                             'tingkat' => $tingkat,
                             'jurusan' => $jurusan,
                             'wali_kelas' => $waliKelas,
-                            'jadwal' => [],
+                            'jadwal' => $jadwal,
                             'siswa_ids' => [],
                             'deleted' => false,
                         ]);
 
-                        echo "  ✅ Kelas: {$namaKelas}\n";
+                        echo "✅ Kelas: {$namaKelas} dengan wali " . ($waliKelas['nama'] ?? '-') . "\n";
+                    } else {
+                        echo "⏭️ Kelas {$namaKelas} sudah ada, dilewati.\n";
                     }
 
-                    // Buat ruangan sesuai nama kelas
-                    $ruangExists = Ruang::where('nama_ruang', $namaKelas)->exists();
-
-                    if (!$ruangExists) {
+                    // Buat ruangan sesuai nama kelas (jika belum ada)
+                    $ruangExist = Ruang::where('nama_ruang', $namaKelas)->exists();
+                    if (!$ruangExist) {
                         Ruang::create([
                             'nama_ruang' => $namaKelas,
                             'luas' => random_int(10, 14),
                             'lokasi' => fake('id_ID')->word(),
                         ]);
+                        echo "  ✅ Ruang {$namaKelas} dibuat.\n";
                     }
                 }
             }

@@ -14,58 +14,70 @@ use Carbon\Carbon;
 class AbsensiController extends Controller
 {
     /**
-     * ============================================
-     * CATATAN UNTUK PEMULA:
-     * Controller ini mengelola ABSENSI kehadiran
-     * siswa dan guru.
-     * 
-     * Di MongoDB, absensi disimpan sebagai ARRAY
-     * 'attendances' di dalam dokumen user.
-     * 
-     * Contoh struktur attendances:
-     * [
-     *   {
-     *     "tanggal": "2026-04-28",
-     *     "status": "masuk",
-     *     "role": "siswa",
-     *     "file_path": null,
-     *     "created_at": "2026-04-28 07:30:00"
-     *   }
-     * ]
-     * 
-     * CARA KERJA SIMPAN ABSENSI:
-     * 1. Cari user by ID
-     * 2. Push data baru ke array attendances
-     * 3. User->save() (otomatis update di MongoDB)
-     * ============================================
+     * API: Ambil semua kelas (untuk dropdown admin)
      */
+    public function getKelas()
+    {
+        $kelas = MongoKelas::kelasAktif()->pluck('nama_kelas');
+        return response()->json($kelas);
+    }
+
+    /**
+     * API: Ambil semua nama guru (untuk dropdown)
+     */
+    public function getGuruNames()
+    {
+        $gurus = MongoUser::where('role', 'guru')->get();
+        $names = [];
+        foreach ($gurus as $g) {
+            $nama = $g->guru_data['nama'] ?? $g->profile['nama_lengkap'] ?? '';
+            if ($nama) $names[] = $nama;
+        }
+        return response()->json($names);
+    }
+
+    /**
+     * API: Ambil nama siswa berdasarkan kelas
+     */
+    public function getSiswaByKelas(Request $request)
+    {
+        $kelasNama = $request->query('kelas');
+        if (!$kelasNama) return response()->json([]);
+        
+        $siswas = MongoUser::where('role', 'siswa')
+            ->where('siswa_data.kelas.nama', $kelasNama)
+            ->get();
+        
+        $names = [];
+        foreach ($siswas as $s) {
+            $nama = $s->siswa_data['nama'] ?? $s->profile['nama_lengkap'] ?? '';
+            if ($nama) $names[] = $nama;
+        }
+        return response()->json($names);
+    }
 
     /**
      * Halaman absensi admin
-     * Menampilkan SEMUA absensi siswa dan guru
-     * 
-     * Route: GET /absensi/admin
      */
     public function showAbsensiAdmin()
     {
-        // Ambil SEMUA user yang punya absensi
-        $allUsers = MongoUser::where('attendances', 'exists', true)
-            ->where('attendances', 'not', [])  // tidak kosong
+        $allUsers = MongoUser::whereRaw(['attendances' => ['$ne' => []]])
+            ->where('attendances', 'exists', true)
             ->get();
         
-        // Pisahkan siswa dan guru
         $siswaAbsensi = [];
         $guruAbsensi = [];
         
         foreach ($allUsers as $user) {
-            foreach ($user->attendances ?? [] as $absen) {
+            foreach ($user->attendances ?? [] as $index => $absen) {
                 $data = array_merge($absen, [
                     'user_id' => $user->_id,
-                    'nama' => $user->nama_lengkap,
-                    'role' => $user->role,
-                    'kelas' => $user->siswa_data['kelas']['nama'] ?? '-',
-                    'nis' => $user->siswa_data['nis'] ?? '-',
-                    'nip' => $user->guru_data['nip'] ?? '-',
+                    'index'   => $index,
+                    'nama'    => $user->nama_lengkap,
+                    'role'    => $user->role,
+                    'kelas'   => $user->siswa_data['kelas']['nama'] ?? '-',
+                    'nis'     => $user->siswa_data['nis'] ?? '-',
+                    'nip'     => $user->guru_data['nip'] ?? '-',
                 ]);
                 
                 if ($user->role === 'siswa') {
@@ -76,208 +88,83 @@ class AbsensiController extends Controller
             }
         }
         
-        // Urutkan: terbaru di atas
         $siswaAbsensi = collect($siswaAbsensi)->sortByDesc('created_at')->values();
-        $guruAbsensi = collect($guruAbsensi)->sortByDesc('created_at')->values();
+        $guruAbsensi  = collect($guruAbsensi)->sortByDesc('created_at')->values();
         
         return view('pages.akademik.absensi.absensi-admin', [
             'siswaAbsensis' => $siswaAbsensi,
-            'guruAbsensis' => $guruAbsensi,
-            'title' => 'Absensi Admin'
+            'guruAbsensis'  => $guruAbsensi,
+            'title'         => 'Absensi Admin'
         ]);
     }
 
     /**
-     * Hapus absensi berdasarkan ID user + index absensi
-     * 
-     * Route: DELETE /absensi/{userId}/{absensiIndex}
-     * 
-     * CARA KERJA:
-     * 1. Cari user by ID
-     * 2. Hapus absensi pada index tertentu dari array
-     * 3. Simpan kembali
+     * Hapus absensi
      */
     public function deleteAbsensi($userId, $absensiIndex)
     {
         try {
             $user = MongoUser::findOrFail($userId);
-            
             $attendances = $user->attendances ?? [];
-            
-            // Hapus absensi pada index tertentu
             if (isset($attendances[$absensiIndex])) {
                 array_splice($attendances, $absensiIndex, 1);
                 $user->attendances = array_values($attendances);
                 $user->save();
             }
-            
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false, 
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
 
     /**
-     * Ambil detail absensi by ID user
-     * 
-     * Route: GET /absensi/{userId}
+     * Ambil detail absensi
      */
     public function getAbsensiById($userId)
     {
         try {
-            $user = MongoUser::with('attendances')->findOrFail($userId);
-            
+            $user = MongoUser::findOrFail($userId);
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'data' => [
                     'user' => [
-                        'id' => $user->_id,
-                        'nama' => $user->nama_lengkap,
-                        'role' => $user->role,
+                        'id'    => $user->_id,
+                        'nama'  => $user->nama_lengkap,
+                        'role'  => $user->role,
                         'kelas' => $user->siswa_data['kelas']['nama'] ?? null,
-                        'nip' => $user->guru_data['nip'] ?? null,
                     ],
                     'attendances' => $user->attendances ?? [],
                 ]
             ]);
         } catch (\Exception $e) {
-            Log::error('Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false, 
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
 
     /**
-     * Update absensi (ganti status)
-     * 
-     * Route: PUT /absensi/{userId}/{absensiIndex}
-     * 
-     * CARA KERJA:
-     * 1. Cari user
-     * 2. Update status di array attendances pada index tertentu
-     * 3. Simpan
+     * Update status absensi (via admin)
      */
     public function updateAbsensi(Request $request, $userId, $absensiIndex)
     {
         try {
             $user = MongoUser::findOrFail($userId);
-            
             $attendances = $user->attendances ?? [];
-            
             if (isset($attendances[$absensiIndex])) {
-                // Update status
-                $attendances[$absensiIndex]['status'] = $request->status_absen ?? $attendances[$absensiIndex]['status'];
-                
-                // Update file jika ada
-                if ($request->has('file_path')) {
-                    $attendances[$absensiIndex]['file_path'] = $request->file_path;
-                }
-                
+                $attendances[$absensiIndex]['status'] = $request->status_absen;
                 $user->attendances = $attendances;
                 $user->save();
             }
-            
-            return response()->json([
-                'success' => true, 
-                'message' => 'Absensi berhasil diupdate'
-            ]);
+            return response()->json(['success' => true]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false, 
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false], 500);
         }
     }
 
     /**
-     * Halaman absensi siswa
-     * 
-     * Route: GET /absensi/siswa
-     */
-    public function showAbsensiSiswa(Request $request)
-    {
-        $siswas = MongoUser::where('role', 'siswa')->get();
-        
-        // Kumpulkan semua absensi siswa
-        $allAbsensi = [];
-        foreach ($siswas as $siswa) {
-            foreach ($siswa->attendances ?? [] as $absen) {
-                $allAbsensi[] = array_merge($absen, [
-                    'user_id' => $siswa->_id,
-                    'nama' => $siswa->nama_lengkap,
-                    'kelas' => $siswa->siswa_data['kelas']['nama'] ?? '-',
-                ]);
-            }
-        }
-        
-        $allAbsensi = collect($allAbsensi)->sortByDesc('created_at')->values();
-        
-        if ($request->ajax()) {
-            return response()->json($allAbsensi);
-        }
-        
-        return view('pages.akademik.absensi.absensi-siswa', [
-            'absensis' => $allAbsensi,
-            'title' => 'Absensi Siswa'
-        ]);
-    }
-
-    /**
-     * Halaman absensi guru
-     * 
-     * Route: GET /absensi/guru
-     */
-    public function showAbsensiGuru(Request $request)
-    {
-        $gurus = MongoUser::where('role', 'guru')->get();
-        
-        // Kumpulkan semua absensi guru
-        $allAbsensi = [];
-        foreach ($gurus as $guru) {
-            foreach ($guru->attendances ?? [] as $absen) {
-                $allAbsensi[] = array_merge($absen, [
-                    'user_id' => $guru->_id,
-                    'nama' => $guru->nama_lengkap,
-                    'nip' => $guru->guru_data['nip'] ?? '-',
-                ]);
-            }
-        }
-        
-        $allAbsensi = collect($allAbsensi)->sortByDesc('created_at')->values();
-        
-        if ($request->ajax()) {
-            return response()->json($allAbsensi);
-        }
-        
-        return view('pages.akademik.absensi.absensi-guru', [
-            'absensis' => $allAbsensi,
-            'title' => 'Absensi Guru'
-        ]);
-    }
-
-    /**
-     * Simpan absensi (dari user yang login)
-     * 
-     * Route: POST /absensi
-     * 
-     * CARA KERJA LENGKAP:
-     * 1. Validasi input
-     * 2. Cek apakah user sudah absen hari ini
-     * 3. Jika belum, push absensi baru ke array
-     * 4. Upload file PDF jika ada (surat sakit/izin)
-     * 5. Simpan user
+     * Simpan absensi (untuk user yang login)
      */
     public function store(Request $request)
     {
-        // Log untuk debugging
-        Log::info('Absensi store request data:', $request->all());
-        
-        // Validasi
         $request->validate([
             'status_absen' => 'required|in:masuk,sakit,izin',
             'role' => 'required',
@@ -285,208 +172,241 @@ class AbsensiController extends Controller
             'file' => 'nullable|mimes:pdf|max:5120',
         ]);
         
-        $userId = $request->input('id_user');
+        $userId = $request->id_user;
         $today = now()->format('Y-m-d');
-        
-        // Cari user
         $user = MongoUser::find($userId);
+        if (!$user) return response()->json(['message' => 'User tidak ditemukan'], 404);
         
+        foreach ($user->attendances ?? [] as $absen) {
+            if (($absen['tanggal'] ?? '') === $today) {
+                return response()->json(['message' => 'Anda telah melakukan presensi hari ini'], 400);
+            }
+        }
+        
+        $attendances = $user->attendances ?? [];
+        $attendances[] = [
+            'tanggal'    => $today,
+            'status'     => $request->status_absen,
+            'role'       => $request->role,
+            'file_path'  => null,
+            'created_at' => now()->toDateTimeString(),
+        ];
+        
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $fileName = 'absensi_' . $user->_id . '_' . time() . '.pdf';
+            $file->storeAs('absensi_files', $fileName, 'public');
+            $lastIndex = count($attendances) - 1;
+            $attendances[$lastIndex]['file_path'] = $fileName;
+        }
+        
+        $user->attendances = $attendances;
+        $user->save();
+        
+        return response()->json(['message' => 'Data absensi berhasil disimpan'], 201);
+    }
+
+    /**
+     * Simpan absensi oleh admin
+     */
+    public function storeAdmin(Request $request)
+    {
+        $request->validate([
+            'status_absen' => 'required|in:masuk,sakit,izin',
+            'role'         => 'required|in:siswa,guru',
+            'nama_siswa'   => 'required',
+            'file'         => 'nullable|mimes:pdf|max:5120',
+        ]);
+
+        Log::info('Upload file attempt', ['hasFile' => $request->hasFile('file'), 'file' => $request->file('file')]);
+if ($request->hasFile('file')) {
+    $file = $request->file('file');
+    Log::info('File details', ['name' => $file->getClientOriginalName(), 'size' => $file->getSize(), 'error' => $file->getError()]);
+    // ... simpan file
+}
+        
+        $namaUser = $request->nama_siswa;
+        $selectedRole = $request->role;
+        $user = $this->cariUserByNamaRole($namaUser, $selectedRole);
         if (!$user) {
             return response()->json(['message' => 'User tidak ditemukan'], 404);
         }
         
-        // Cek apakah user sudah absen hari ini
-        $sudahAbsen = false;
-        foreach ($user->attendances ?? [] as $absen) {
-            if (($absen['tanggal'] ?? '') === $today) {
-                $sudahAbsen = true;
-                break;
-            }
-        }
-        
-        if ($sudahAbsen) {
-            Log::info('Presensi hari ini sudah ada untuk user ' . $userId);
-            return response()->json([
-                'message' => 'Anda telah melakukan presensi pada hari ini'
-            ], 400);
-        }
-        
-        // Siapkan data absensi baru
-        $absensiBaru = [
-            'tanggal' => $today,
-            'status' => $request->input('status_absen'),
-            'role' => $request->input('role'),
-            'file_path' => null,
+        $today = now()->format('Y-m-d');
+        $attendances = $user->attendances ?? [];
+        $attendances[] = [
+            'tanggal'    => $today,
+            'status'     => $request->status_absen,
+            'role'       => $selectedRole,
+            'file_path'  => null,
             'created_at' => now()->toDateTimeString(),
+            'created_by' => 'admin',
         ];
         
-        // Push ke array attendances
-        $attendances = $user->attendances ?? [];
-        $attendances[] = $absensiBaru;
-        
-        // Handle upload file PDF
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            Log::info('Uploaded file name: ' . $file->getClientOriginalName());
-            
-            // Simpan file
-            $fileName = 'absensi_' . $user->_id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $fileName = 'absensi_' . $user->_id . '_' . time() . '.pdf';
             $file->storeAs('absensi_files', $fileName, 'public');
-            
-            // Update file_path di absensi terbaru
             $lastIndex = count($attendances) - 1;
             $attendances[$lastIndex]['file_path'] = $fileName;
-            
-            Log::info('File path saved: ' . $fileName);
         }
         
-        // Simpan ke user
         $user->attendances = $attendances;
         $user->save();
         
-        return response()->json([
-            'message' => 'Data absensi berhasil disimpan'
-        ], 201);
+        return response()->json(['message' => 'Data absensi berhasil disimpan'], 201);
     }
 
-    /**
-     * Simpan absensi (dari admin)
-     * Admin bisa mencatatkan absensi untuk siswa/guru lain
-     * 
-     * Route: POST /absensi/admin
-     * 
-     * CARA KERJA:
-     * 1. Validasi input
-     * 2. Cari user berdasarkan nama & role
-     * 3. Catat absensi ke user tersebut
-     */
-    public function storeAdmin(Request $request)
-    {
-        Log::info('Absensi store admin request data:', $request->all());
-        
-        try {
-            // Validasi
-            $request->validate([
-                'status_absen' => 'required|in:masuk,sakit,izin',
-                'role' => 'required|in:siswa,guru',
-                'nama_siswa' => 'required',
-                'file' => 'nullable|mimes:pdf|max:5120',
-            ]);
-            
-            $namaUser = $request->input('nama_siswa');
-            $selectedRole = $request->input('role');
-            
-            // Cari user berdasarkan nama dan role
-            $user = $this->cariUserByNamaRole($namaUser, $selectedRole);
-            
-            if (!$user) {
-                return response()->json([
-                    'message' => 'User tidak ditemukan'
-                ], 404);
-            }
-            
-            $today = now()->format('Y-m-d');
-            
-            // Push absensi baru
-            $attendances = $user->attendances ?? [];
-            $attendances[] = [
-                'tanggal' => $today,
-                'status' => $request->input('status_absen'),
-                'role' => $selectedRole,
-                'file_path' => null,
-                'created_at' => now()->toDateTimeString(),
-                'created_by' => 'admin',
-            ];
-            
-            // Handle upload file
-            if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $fileName = 'absensi_' . $user->_id . '_' . time() . '.pdf';
-                $file->storeAs('absensi_files', $fileName, 'public');
-                
-                $lastIndex = count($attendances) - 1;
-                $attendances[$lastIndex]['file_path'] = $fileName;
-            }
-            
-            $user->attendances = $attendances;
-            $user->save();
-            
-            return response()->json([
-                'message' => 'Data absensi berhasil disimpan'
-            ], 201);
-            
-        } catch (\Exception $e) {
-            Log::error('Error in storeAdmin:', ['error' => $e->getMessage()]);
-            return response()->json([
-                'message' => 'Terjadi kesalahan saat menyimpan data absensi'
-            ], 500);
-        }
-    }
-
-    /**
-     * Helper: Cari user berdasarkan nama dan role
-     * 
-     * Di MongoDB, kita bisa cari langsung di field embedded
-     */
     private function cariUserByNamaRole($nama, $role)
     {
         if ($role === 'siswa') {
             return MongoUser::where('role', 'siswa')
-                ->where('siswa_data.nama', $nama)
-                ->orWhere('profile.nama_lengkap', $nama)
-                ->first();
+                ->where(function($q) use ($nama) {
+                    $q->where('siswa_data.nama', $nama)
+                      ->orWhere('profile.nama_lengkap', $nama);
+                })->first();
         } elseif ($role === 'guru') {
             return MongoUser::where('role', 'guru')
-                ->where('guru_data.nama', $nama)
-                ->orWhere('profile.nama_lengkap', $nama)
-                ->first();
+                ->where(function($q) use ($nama) {
+                    $q->where('guru_data.nama', $nama)
+                      ->orWhere('profile.nama_lengkap', $nama);
+                })->first();
         }
-        
         return null;
     }
 
     /**
+     * Halaman absensi siswa (untuk role siswa)
+     */
+    public function showAbsensiSiswa()
+    {
+        $siswa = auth()->user();
+        $absensis = $siswa->attendances ?? [];
+        $absensis = collect($absensis)->sortByDesc('created_at')->values();
+        return view('pages.akademik.absensi.absensi-siswa', [
+            'absensis' => $absensis,
+            'title' => 'Absensi Siswa'
+        ]);
+    }
+
+    /**
+     * Halaman absensi guru (untuk role guru)
+     */
+    public function showAbsensiGuru()
+    {
+        $guru = auth()->user();
+        $absensis = $guru->attendances ?? [];
+        $absensis = collect($absensis)->sortByDesc('created_at')->values();
+        return view('pages.akademik.absensi.absensi-guru', [
+            'absensis' => $absensis,
+            'title' => 'Absensi Guru'
+        ]);
+    }
+
+    /**
+     * Halaman index absensi (pilih tahun akademik)
+     */
+    public function index()
+    {
+        $akademiks = MongoAkademik::all();
+        $tahunAjaran = $akademiks->pluck('tahun_ajaran')->unique()->values();
+        return view('pages.akademik.absensi.absensi', [
+            'akademiks' => $tahunAjaran,
+            'title' => 'Absensi'
+        ]);
+    }
+
+    /**
+     * Halaman absensi per kelas (untuk admin/guru lihat absensi per kelas)
+     */
+    public function showKelasAbsensi(Request $request, $tahunAkademik, $kelasNama)
+    {
+        $tahunAkademik = str_replace('-', '/', $tahunAkademik);
+        $kelasList = MongoKelas::where('nama_kelas', 'like', $kelasNama . '%')
+            ->where('deleted', false)
+            ->get();
+        if ($kelasList->isEmpty()) abort(404);
+        
+        $selectedKelas = $request->selected_kelas ?? $kelasList->first()->nama_kelas;
+        $selectedSemester = $request->selected_semester ?? 'ganjil';
+        
+        $siswas = MongoUser::where('role', 'siswa')
+            ->where('siswa_data.kelas.nama', $selectedKelas)
+            ->get();
+        
+        $absensiList = [];
+        foreach ($siswas as $siswa) {
+            foreach ($siswa->attendances ?? [] as $index => $absen) {
+                $absensiList[] = array_merge($absen, [
+                    'user_id' => $siswa->_id,
+                    'index'   => $index,
+                    'nama'    => $siswa->nama_lengkap,
+                ]);
+            }
+        }
+        $absensiList = collect($absensiList)->sortByDesc('created_at')->values();
+        
+        return view('pages.akademik.absensi.absensi-kelas', [
+            'kelas_list'       => $kelasList,
+            'selected_kelas'   => $selectedKelas,
+            'selected_semester'=> $selectedSemester,
+            'list_status'      => ['tidak masuk', 'masuk', 'sakit', 'izin', 'telat'],
+            'absensis'         => $absensiList,
+            'title'            => 'Absensi - ' . $selectedKelas
+        ]);
+    }
+
+    /**
+     * API Update absensi (dari halaman admin dan kelas)
+     */
+    public function apiUpdateAbsensi(Request $request, $userId, $absensiIndex)
+    {
+        try {
+            $user = MongoUser::findOrFail($userId);
+            $attendances = $user->attendances ?? [];
+            
+            if (isset($attendances[$absensiIndex])) {
+                // Update status
+                $attendances[$absensiIndex]['status'] = $request->status;
+                
+                // Jika status izin, simpan keterangan
+                if ($request->status == 'izin' && $request->has('keterangan_izin')) {
+                    $attendances[$absensiIndex]['keterangan'] = $request->keterangan_izin;
+                }
+                
+                $user->attendances = $attendances;
+                $user->save();
+                
+                return response()->json(['success' => true]);
+            }
+            return response()->json(['success' => false, 'message' => 'Absensi tidak ditemukan'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Cek dan isi otomatis absensi untuk hari yang terlewat
-     * 
-     * CARA KERJA:
-     * 1. Cek 7 hari ke belakang (kecuali Sabtu-Minggu)
-     * 2. Jika ada hari tanpa absensi, isi "tidak masuk"
-     * 3. Jika sudah lewat jam 4 sore dan belum absen hari ini, isi "tidak masuk"
      */
     public function checkAndFillAbsentData()
     {
-        Log::info('checkAndFillAbsentData dijalankan pada ' . now());
-        
         $userId = Auth::id();
         $user = MongoUser::find($userId);
+        if (!$user) return response()->json(['success' => false], 404);
         
-        if (!$user) {
-            return response()->json(['success' => false], 404);
-        }
-        
-        $dataInserted = false;
         $attendances = $user->attendances ?? [];
-        
-        // Cek 8 hari ke belakang
         $endDate = now()->subDay();
         $startDate = $endDate->copy()->subDays(8);
+        $dataInserted = false;
         
         while ($startDate <= $endDate) {
             $dayOfWeek = $startDate->dayOfWeek;
             $tanggalCek = $startDate->format('Y-m-d');
-            
-            // Skip Sabtu (6) dan Minggu (0)
             if ($dayOfWeek != 6 && $dayOfWeek != 0) {
-                // Cek apakah sudah ada absensi di tanggal ini
                 $sudahAbsen = false;
                 foreach ($attendances as $absen) {
-                    if (($absen['tanggal'] ?? '') === $tanggalCek) {
-                        $sudahAbsen = true;
-                        break;
-                    }
+                    if (($absen['tanggal'] ?? '') === $tanggalCek) { $sudahAbsen = true; break; }
                 }
-                
-                // Jika belum, isi otomatis "tidak masuk"
                 if (!$sudahAbsen) {
                     $attendances[] = [
                         'tanggal' => $tanggalCek,
@@ -498,24 +418,16 @@ class AbsensiController extends Controller
                     $dataInserted = true;
                 }
             }
-            
             $startDate->addDay();
         }
         
-        // Cek hari ini (jika sudah lewat jam 4 sore)
         $today = now()->format('Y-m-d');
         $dayOfWeekToday = now()->dayOfWeek;
         $sudahAbsenHariIni = false;
-        
         foreach ($attendances as $absen) {
-            if (($absen['tanggal'] ?? '') === $today) {
-                $sudahAbsenHariIni = true;
-                break;
-            }
+            if (($absen['tanggal'] ?? '') === $today) { $sudahAbsenHariIni = true; break; }
         }
-        
         $disablePresensi = false;
-        
         if (!$sudahAbsenHariIni && now()->format('H:i:s') >= '16:00:00' && $dayOfWeekToday != 6 && $dayOfWeekToday != 0) {
             $attendances[] = [
                 'tanggal' => $today,
@@ -528,7 +440,6 @@ class AbsensiController extends Controller
             $disablePresensi = true;
         }
         
-        // Simpan jika ada perubahan
         if ($dataInserted) {
             $user->attendances = $attendances;
             $user->save();
@@ -552,7 +463,6 @@ class AbsensiController extends Controller
             'keterangan' => 'nullable|string',
         ]);
         
-        // Simpan sebagai pengumuman type 'keterangan_absensi'
         MongoPengumuman::create([
             'title' => $data['status'] === 'weekend' ? 'Akhir Pekan' : 'Libur',
             'message' => $data['keterangan'] ?? '',
@@ -574,113 +484,15 @@ class AbsensiController extends Controller
      */
     public function getEventsFromDatabase()
     {
-        Log::info('Fetching events from database...');
-        
         try {
             $events = MongoPengumuman::where('type', 'keterangan_absensi')
                 ->whereIn('data_tambahan.status', ['weekend', 'libur'])
                 ->get();
-            
-            $weekendDates = $events->pluck('data_tambahan.tanggal')
-                ->filter()
-                ->values()
-                ->toArray();
-            
-            Log::info('Filtered weekend dates:', $weekendDates);
-            
+            $weekendDates = $events->pluck('data_tambahan.tanggal')->filter()->values()->toArray();
             return response()->json($weekendDates);
         } catch (\Exception $e) {
             Log::error('Error fetching events: ' . $e->getMessage());
-            return response()->json([
-                'error' => 'Failed to fetch events'
-            ], 500);
+            return response()->json(['error' => 'Failed to fetch events'], 500);
         }
-    }
-
-    /**
-     * Halaman absensi (index)
-     */
-    public function index()
-    {
-        $akademiks = MongoAkademik::all();
-        
-        // Ambil tahun ajaran unik
-        $tahunAjaran = $akademiks->pluck('tahun_ajaran')->unique()->values();
-        
-        return view('pages.akademik.absensi.absensi', [
-            'akademiks' => $tahunAjaran,
-            'title' => 'Absensi'
-        ]);
-    }
-
-    /**
-     * Halaman absensi per kelas
-     */
-    public function showKelasAbsensi(Request $request, $tahunAkademik, $kelasNama)
-    {
-        $tahunAkademik = str_replace('-', '/', $tahunAkademik);
-        
-        // Cari kelas
-        $kelasList = MongoKelas::where('nama_kelas', 'like', $kelasNama . '%')
-            ->where('deleted', false)
-            ->get();
-        
-        if (count($kelasList) < 1) {
-            abort(404);
-        }
-        
-        // Pilih kelas
-        $selectedKelas = $request->selected_kelas ?? $kelasList->first()->nama_kelas;
-        $selectedSemester = $request->selected_semester ?? 'ganjil';
-        
-        // Ambil siswa di kelas tersebut
-        $siswas = MongoUser::where('role', 'siswa')
-            ->where('siswa_data.kelas.nama', $selectedKelas)
-            ->get();
-        
-        // Kumpulkan absensi
-        $absensiList = [];
-        foreach ($siswas as $siswa) {
-            foreach ($siswa->attendances ?? [] as $absen) {
-                $absensiList[] = array_merge($absen, [
-                    'user_id' => $siswa->_id,
-                    'nama' => $siswa->nama_lengkap,
-                ]);
-            }
-        }
-        
-        $absensiList = collect($absensiList)->sortByDesc('created_at')->values();
-        
-        return view('pages.akademik.absensi.absensi-kelas', [
-            'kelas_list' => $kelasList,
-            'selected_kelas' => $selectedKelas,
-            'selected_semester' => $selectedSemester,
-            'list_status' => ['tidak masuk', 'masuk', 'sakit', 'izin', 'telat'],
-            'absensis' => $absensiList,
-            'title' => 'Absensi - ' . $selectedKelas
-        ]);
-    }
-
-    /**
-     * API Update absensi (dari halaman absensi kelas)
-     */
-    public function apiUpdateAbsensi(Request $request, $userId, $absensiIndex)
-    {
-        $user = MongoUser::findOrFail($userId);
-        
-        $attendances = $user->attendances ?? [];
-        
-        if (isset($attendances[$absensiIndex])) {
-            $attendances[$absensiIndex]['status'] = $request->status;
-            
-            if ($request->status == 'izin' && $request->has('keterangan_izin')) {
-                $attendances[$absensiIndex]['keterangan'] = $request->keterangan_izin;
-            }
-            
-            $user->attendances = $attendances;
-            $user->save();
-        }
-        
-        return back()->with('toast_success', 'Absensi berhasil diupdate');
     }
 }

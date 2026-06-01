@@ -22,9 +22,9 @@
                         <table id="example" class="table align-items-center mb-0">
                             <thead>
                                 <tr>
-                                    <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">No</th>
-                                    <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Nama Kelas</th>
-                                    <th class="text-center text-uppercase text-secondary text-xs font-weight-bolder opacity-7">Aksi</th>
+                                    <th class="text-center">No</th>
+                                    <th class="text-center">Nama Kelas</th>
+                                    <th class="text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -33,7 +33,6 @@
                                         <td class="text-center">{{ $loop->iteration }}</td>
                                         <td class="text-center">{{ $kelas->nama_kelas }}</td>
                                         <td class="text-center">
-                                            {{-- MONGODB: gunakan _id --}}
                                             <a href="/akademik/jadwal-kelas/{{ $kelas->_id }}" class="btn btn-success btn-sm rounded">
                                                 <i class="fa fa-edit"></i> Atur Jadwal
                                             </a>

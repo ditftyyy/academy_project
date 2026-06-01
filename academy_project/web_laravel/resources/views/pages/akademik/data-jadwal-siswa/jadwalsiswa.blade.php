@@ -32,14 +32,8 @@
                                         <div class="card-body">
                                             @forelse ($mataPelajaran as $mp)
                                                 <div style="border-bottom: 1.5px dashed grey; padding-bottom: 10px; margin-top: 10px">
-                                                    <div>
-                                                        {{ $mp['jam_mulai'] }} - {{ $mp['jam_selesai'] }}
-                                                        <b>({{ $mp['ruang'] }})</b>
-                                                    </div>
-                                                    <div>
-                                                        <b>{{ $mp['mapel'] }}</b>
-                                                        <span>({{ $mp['guru'] }})</span>
-                                                    </div>
+                                                    <div>{{ $mp['jam_mulai'] }} - {{ $mp['jam_selesai'] }} <b>({{ $mp['ruang'] }})</b></div>
+                                                    <div><b>{{ $mp['mapel'] }}</b> <span>({{ $mp['guru'] }})</span></div>
                                                 </div>
                                             @empty
                                                 <p class="text-center text-muted">Libur / Tidak ada jadwal</p>

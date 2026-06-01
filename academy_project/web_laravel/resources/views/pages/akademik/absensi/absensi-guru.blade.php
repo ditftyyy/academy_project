@@ -8,6 +8,22 @@
     <h6 class="font-weight-bolder mb-0">Data Absensi Guru</h6>
 @endsection
 
+@php
+    // Fungsi helper untuk parse tanggal (didefinisikan SEKALI di luar loop)
+    function safeParseDate($dateStr) {
+        if (empty($dateStr)) return now();
+        if (is_numeric($dateStr)) {
+            $timestamp = (strlen((string)$dateStr) > 10) ? (int)($dateStr / 1000) : (int)$dateStr;
+            return \Carbon\Carbon::createFromTimestamp($timestamp);
+        }
+        try {
+            return \Carbon\Carbon::parse($dateStr);
+        } catch (\Exception $e) {
+            return now();
+        }
+    }
+@endphp
+
 @section('content')
 <div class="row">
   <div class="col-12">
@@ -48,12 +64,16 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {{-- MONGODB: absensis adalah array dari controller --}}
                         @foreach ($absensis as $absen)
+                            @php
+                                $tanggalRaw = $absen['tanggal'] ?? $absen['created_at'] ?? null;
+                                $tanggalObj = safeParseDate($tanggalRaw);
+                                $jamObj = safeParseDate($absen['created_at'] ?? $absen['tanggal'] ?? null);
+                            @endphp
                             <tr>
-                                <td>{{ \Carbon\Carbon::parse($absen['tanggal'] ?? $absen['created_at'] ?? now())->format('d-m-Y') }}</td>
-                                <td>{{ \Carbon\Carbon::parse($absen['tanggal'] ?? $absen['created_at'] ?? now())->locale('id')->isoFormat('dddd') }}</td>
-                                <td>{{ \Carbon\Carbon::parse($absen['created_at'] ?? $absen['tanggal'] ?? now())->format('H:i:s') }}</td>
+                                <td>{{ $tanggalObj->format('d-m-Y') }}</td>
+                                <td>{{ $tanggalObj->locale('id')->isoFormat('dddd') }}</td>
+                                <td>{{ $jamObj->format('H:i:s') }}</td>
                                 <td>{{ $absen['status'] ?? '-' }}</td>
                             </tr>
                         @endforeach
@@ -84,7 +104,8 @@
                 <div class="file-upload-container" id="fileUploadContainer" style="display: none;">
                     <div class="mb-3">
                         <label for="fileInput" class="form-label">Unggah File (PDF):</label>
-                        <input type="file" class="form-control" id="fileInput" name="file" accept=".pdf">
+                        <input type="file" class="form-control" id="fileInput" name="file" accept="application/pdf">
+                        <small class="text-muted">Maksimal 5MB</small>
                     </div>
                 </div>
                 
@@ -105,23 +126,25 @@
 .form-check { margin-right: 40px; }
 .submit-button {
     border: none; border-radius: 5px;
-    background-color: #007bff; color: #fff;
-    padding: 10px 20px; cursor: pointer;
+    background-color: #007bff;
+    color: #fff;
+    padding: 10px 20px;
+    cursor: pointer;
 }
 .notification-container {
     position: fixed; top: 50%; left: 50%;
     transform: translate(-50%, -50%); z-index: 1000;
 }
 .notification {
-    background-color: #4CAF50; color: white;
-    padding: 15px; border-radius: 5px; margin-bottom: 20px;
+    background-color: #4CAF50;
+    color: white;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
 }
 </style>
 
 <script>
-    // ============================================
-    // CHART
-    // ============================================
     document.addEventListener("DOMContentLoaded", function() {
         let masukCount = 0, sakitCount = 0, izinCount = 0, tidakMasukCount = 0;
         
@@ -154,16 +177,9 @@
         checkPresensiHariIni();
     });
     
-    // ============================================
-    // VARIABEL
-    // ============================================
     let selectedOption = null;
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
     const userId = '{{ auth()->id() }}';
-    
-    // ============================================
-    // FUNGSI
-    // ============================================
     
     function selectOption(option) {
         selectedOption = option;
@@ -177,6 +193,12 @@
             return;
         }
         
+        const fileInput = document.getElementById('fileInput');
+        if ((selectedOption === 'sakit' || selectedOption === 'izin') && fileInput.files.length === 0) {
+            alert('Harap unggah file surat (PDF).');
+            return;
+        }
+        
         const submitButton = document.getElementById('submitButton');
         submitButton.innerHTML = 'Mengirim...';
         submitButton.disabled = true;
@@ -186,18 +208,13 @@
         formData.append('role', 'guru');
         formData.append('id_user', userId);
         
-        const fileInput = document.getElementById('fileInput');
         if (fileInput.files.length > 0) {
             formData.append('file', fileInput.files[0]);
         }
         
-        // MONGODB: Kirim ke route absensi.store
         fetch('{{ route('absensi.store') }}', {
             method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json',
-            },
+            headers: { 'X-CSRF-TOKEN': csrfToken },
             body: formData,
         })
         .then(response => response.json())
@@ -214,6 +231,10 @@
                     </div>
                 `;
                 setTimeout(() => location.reload(), 2000);
+            } else if (data.errors) {
+                alert(Object.values(data.errors).flat().join('\n'));
+            } else {
+                alert('Terjadi kesalahan. Silakan coba lagi.');
             }
         })
         .catch(error => {
@@ -229,10 +250,21 @@
         let sudahAbsen = false;
         
         @foreach ($absensis as $absen)
-            @php $tanggalAbsen = substr($absen['tanggal'] ?? $absen['created_at'] ?? '', 0, 10); @endphp
-            if ('{{ $tanggalAbsen }}' === today) {
+            @php
+                $tanggalRaw = $absen['tanggal'] ?? $absen['created_at'] ?? '';
+                $tanggalCompare = '';
+                if (is_numeric($tanggalRaw)) {
+                    $timestamp = (strlen((string)$tanggalRaw) > 10) ? (int)($tanggalRaw / 1000) : (int)$tanggalRaw;
+                    $tanggalCompare = date('Y-m-d', $timestamp);
+                } elseif (!empty($tanggalRaw)) {
+                    try {
+                        $tanggalCompare = \Carbon\Carbon::parse($tanggalRaw)->format('Y-m-d');
+                    } catch (\Exception $e) {}
+                }
+            @endphp
+            @if(!empty($tanggalCompare) && $tanggalCompare === now()->format('Y-m-d'))
                 sudahAbsen = true;
-            }
+            @endif
         @endforeach
         
         if (sudahAbsen) {

@@ -34,19 +34,19 @@
     </div>
 
     {{-- Modal --}}
-    <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Tambah Kegiatan</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">Tambah Kegiatan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="text" class="form-control" id="kalender-akademik-title" autofocus>
-                    <span id="titleError" class="text-danger"></span>
+                    <input type="text" class="form-control" id="kalender-akademik-title" placeholder="Judul kegiatan" autofocus>
+                    <span id="titleError" class="text-danger small"></span>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
                     <button type="button" id="saveKalenderBtn" class="btn btn-primary">Simpan</button>
                 </div>
             </div>
@@ -58,20 +58,23 @@
             $.ajaxSetup({
                 headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
             });
-            var booking = @json($events);
+
+            var events = @json($events);
+
             $('#calendar').fullCalendar({
                 header: {
-                    left: 'prev, next today',
+                    left: 'prev,next today',
                     center: 'title',
-                    right: 'month, agendaWeek, agendaDay',
+                    right: 'month,agendaWeek,agendaDay',
                 },
-                events: booking,
+                events: events,
                 selectable: true,
                 selectHelper: true,
-                select: function(start, end, allDays) {
-                    $('#bookingModal').modal('toggle');
+                select: function(start, end) {
+                    // Simpan tanggal ke localStorage
                     localStorage.setItem('kalender-start-date', moment(start).format('YYYY-MM-DD'));
-                    localStorage.setItem('kalender-end-date', moment(end).format('YYYY-MM-DD'));
+                    localStorage.setItem('kalender-end-date', moment(end).subtract(1, 'day').format('YYYY-MM-DD'));
+                    $('#bookingModal').modal('toggle');
                 },
                 editable: true,
                 eventDrop: function(event) {
@@ -81,56 +84,70 @@
                     $.ajax({
                         url: "{{ route('calendar.update', '') }}/" + id,
                         type: "PATCH",
-                        dataType: 'json',
-                        data: { start_date, end_date },
-                        success: function(response) { swal("Good job!", "Event Updated!", "success"); },
-                        error: function(error) { console.log(error); },
+                        data: { start_date: start_date, end_date: end_date },
+                        success: function() {
+                            swal("Berhasil!", "Jadwal diperbarui", "success");
+                        },
+                        error: function() {
+                            swal("Gagal!", "Terjadi kesalahan", "error");
+                        }
                     });
                 },
                 eventClick: function(event) {
-                    var id = event.id;
-                    if (confirm('Hapus event?')) {
+                    if (confirm('Hapus event "' + event.title + '" ?')) {
                         $.ajax({
-                            url: "{{ route('calendar.destroy', '') }}/" + id,
+                            url: "{{ route('calendar.destroy', '') }}/" + event.id,
                             type: "DELETE",
-                            dataType: 'json',
-                            success: function(response) {
-                                $('#calendar').fullCalendar('removeEvents', response);
+                            success: function() {
+                                $('#calendar').fullCalendar('removeEvents', event.id);
+                                swal("Terhapus!", "Event dihapus", "success");
                             },
-                            error: function(error) { console.log(error); },
+                            error: function() {
+                                swal("Gagal!", "Event tidak ditemukan", "error");
+                            }
                         });
                     }
                 },
                 selectAllow: function(event) {
-                    return moment(event.start).utcOffset(false).isSame(moment(event.end).subtract(1, 'second').utcOffset(false), 'day');
-                },
+                    // Hanya allow seleksi 1 hari (end = start + 1 day di fullcalendar)
+                    return moment(event.start).isSame(moment(event.end).subtract(1, 'second'), 'day');
+                }
             });
 
             $('#saveKalenderBtn').click(function() {
-                var title = $('#kalender-akademik-title').val();
+                var title = $('#kalender-akademik-title').val().trim();
+                if (title === '') {
+                    $('#titleError').text('Judul tidak boleh kosong');
+                    return;
+                }
+                $('#titleError').text('');
+
                 var start_date = localStorage.getItem('kalender-start-date');
                 var end_date = localStorage.getItem('kalender-end-date');
+
                 $.ajax({
                     url: "{{ route('calendar.store') }}",
                     type: "POST",
-                    dataType: 'json',
-                    data: { title, start_date, end_date },
+                    data: { title: title, start_date: start_date, end_date: end_date },
                     success: function(response) {
                         $('#bookingModal').modal('hide');
                         $('#calendar').fullCalendar('renderEvent', {
-                            'id': response.id,
-                            'title': response.title,
-                            'start': response.start,
-                            'end': response.end,
-                            'color': response.color
+                            id: response.id,
+                            title: response.title,
+                            start: response.start,
+                            end: response.end,
+                            color: response.color
                         });
                         $('#kalender-akademik-title').val('');
+                        swal("Berhasil!", "Kegiatan ditambahkan", "success");
                     },
-                    error: function(error) {
-                        if (error.responseJSON.errors) {
-                            $('#titleError').html(error.responseJSON.errors.title);
+                    error: function(xhr) {
+                        if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            $('#titleError').text(xhr.responseJSON.errors.title);
+                        } else {
+                            swal("Gagal!", "Terjadi kesalahan server", "error");
                         }
-                    },
+                    }
                 });
             });
         });

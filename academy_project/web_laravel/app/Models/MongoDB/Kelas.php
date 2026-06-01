@@ -2,7 +2,7 @@
 
 namespace App\Models\MongoDB;
 
-use Jenssegers\Mongodb\Eloquent\Model;  // <-- GANTI INI
+use Jenssegers\Mongodb\Eloquent\Model;
 
 class Kelas extends Model
 {
@@ -11,51 +11,48 @@ class Kelas extends Model
 
     protected $fillable = [
         'nama_kelas',
-        'tingkat',      // X, XI, XII
-        'jurusan',      // IPA, IPS
+        'tingkat',
+        'jurusan',
         'deleted',
-        
-        // Wali kelas
         'wali_kelas',
-        
-        // Jadwal embedded
         'jadwal',
-        
-        // Daftar siswa (hanya ID reference)
         'siswa_ids',
-        
-        // Tahun ajaran aktif
         'tahun_ajaran_aktif',
     ];
 
     protected $casts = [
         'wali_kelas' => 'array',
-        'jadwal' => 'array',
         'siswa_ids' => 'array',
         'deleted' => 'boolean',
+        // jadwal tidak di-cast agar kita handle manual
     ];
 
     public $timestamps = true;
 
-    // ========== SCOPES ==========
-    
+    // Accessor untuk jadwal (mengubah string JSON menjadi array)
+    public function getJadwalAttribute($value)
+    {
+        if (is_null($value)) return [];
+        if (is_array($value)) return $value;
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        return [];
+    }
+
+    // Mutator untuk jadwal (mengubah array menjadi string JSON saat disimpan)
+    public function setJadwalAttribute($value)
+    {
+        $this->attributes['jadwal'] = json_encode($value, JSON_UNESCAPED_UNICODE);
+    }
+
+    // Scope
     public function scopeKelasAktif($query)
     {
         return $query->where('deleted', false);
     }
 
-    public function scopeByTingkat($query, $tingkat)
-    {
-        return $query->where('tingkat', $tingkat);
-    }
-
-    public function scopeByJurusan($query, $jurusan)
-    {
-        return $query->where('jurusan', $jurusan);
-    }
-
-    // ========== ACCESSORS ==========
-    
     public function getNamaWaliKelasAttribute()
     {
         return $this->wali_kelas['nama'] ?? 'Belum ditentukan';
@@ -66,69 +63,98 @@ class Kelas extends Model
         return count($this->siswa_ids ?? []);
     }
 
-    public function getJadwalHariIniAttribute()
-    {
-        $hariIni = strtolower(now()->locale('id')->dayName);
-        
-        foreach ($this->jadwal ?? [] as $j) {
-            if (strtolower($j['hari']) === $hariIni) {
-                return $j['mata_pelajaran'] ?? [];
-            }
-        }
-
-        return [];
-    }
-
-    // ========== METHODS ==========
-    
-    /**
-     * Menambah siswa ke kelas
-     */
-    public function tambahSiswa(string $userId): void
+    // ========== METHOD UNTUK MENGELOLA SISWA ==========
+    public function tambahSiswa(string $siswaId): void
     {
         $siswaIds = $this->siswa_ids ?? [];
-        
-        if (!in_array($userId, $siswaIds)) {
-            $siswaIds[] = $userId;
+        if (!in_array($siswaId, $siswaIds)) {
+            $siswaIds[] = $siswaId;
             $this->siswa_ids = $siswaIds;
             $this->save();
         }
     }
 
-    /**
-     * Mengeluarkan siswa dari kelas
-     */
-    public function keluarkanSiswa(string $userId): void
+    public function keluarkanSiswa(string $siswaId): void
     {
-        $this->siswa_ids = array_values(
-            array_filter($this->siswa_ids ?? [], fn($id) => $id !== $userId)
-        );
+        $siswaIds = $this->siswa_ids ?? [];
+        $siswaIds = array_values(array_filter($siswaIds, fn($id) => $id !== $siswaId));
+        $this->siswa_ids = $siswaIds;
         $this->save();
     }
 
-    /**
-     * Mengupdate jadwal
-     */
-    public function updateJadwal(string $hari, array $mataPelajaran): void
+    // ========== METHOD JADWAL ==========
+    public function updateStatusHari(string $hari, string $status)
     {
-        $jadwal = $this->jadwal ?? [];
+        $jadwal = $this->jadwal; // menggunakan accessor
         $found = false;
-
         foreach ($jadwal as &$j) {
-            if ($j['hari'] === $hari) {
-                $j['mata_pelajaran'] = $mataPelajaran;
+            if (strtolower($j['hari'] ?? '') === strtolower($hari)) {
+                $j['status'] = $status;
                 $found = true;
                 break;
             }
         }
+        if (!$found) {
+            $jadwal[] = ['hari' => $hari, 'status' => $status, 'mata_pelajaran' => []];
+        }
+        $this->jadwal = $jadwal; // trigger mutator
+        $this->save();
+    }
 
+    public function tambahMataPelajaran(string $hari, array $data)
+    {
+        $jadwal = $this->jadwal;
+        $found = false;
+        foreach ($jadwal as &$j) {
+            if (strtolower($j['hari'] ?? '') === strtolower($hari)) {
+                $j['mata_pelajaran'][] = $data;
+                usort($j['mata_pelajaran'], function($a, $b) {
+                    return strcmp($a['jam_mulai'] ?? '', $b['jam_mulai'] ?? '');
+                });
+                $found = true;
+                break;
+            }
+        }
         if (!$found) {
             $jadwal[] = [
                 'hari' => $hari,
-                'mata_pelajaran' => $mataPelajaran,
+                'status' => 'masuk',
+                'mata_pelajaran' => [$data]
             ];
         }
+        $this->jadwal = $jadwal;
+        $this->save();
+    }
 
+    public function updateMataPelajaran(string $hari, int $index, array $data)
+    {
+        $jadwal = $this->jadwal;
+        foreach ($jadwal as &$j) {
+            if (strtolower($j['hari'] ?? '') === strtolower($hari)) {
+                if (isset($j['mata_pelajaran'][$index])) {
+                    $j['mata_pelajaran'][$index] = $data;
+                    usort($j['mata_pelajaran'], function($a, $b) {
+                        return strcmp($a['jam_mulai'] ?? '', $b['jam_mulai'] ?? '');
+                    });
+                }
+                break;
+            }
+        }
+        $this->jadwal = $jadwal;
+        $this->save();
+    }
+
+    public function hapusMataPelajaran(string $hari, int $index)
+    {
+        $jadwal = $this->jadwal;
+        foreach ($jadwal as &$j) {
+            if (strtolower($j['hari'] ?? '') === strtolower($hari)) {
+                if (isset($j['mata_pelajaran'][$index])) {
+                    array_splice($j['mata_pelajaran'], $index, 1);
+                }
+                break;
+            }
+        }
         $this->jadwal = $jadwal;
         $this->save();
     }

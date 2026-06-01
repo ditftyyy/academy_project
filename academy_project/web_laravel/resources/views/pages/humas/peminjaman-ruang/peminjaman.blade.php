@@ -1,6 +1,5 @@
 @extends('components.main')
 @section('title-content','Data Peminjaman Ruang')
-@if (auth()->user()->hasRole('admin','wakasek'))
 @section('breadcrumbs')
 <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
     <li class="breadcrumb-item text-sm"><a class="opacity-5 text-dark" href="/data-peminjaman">Peminjaman</a></li>
@@ -38,11 +37,11 @@
                     @if(auth()->user()->hasRole('admin'))
                         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#insertModal"><i class="material-icons">add</i> Tambah</button>
                     @endif
-                    <a href="/data-peminjaman-history" class="btn btn-danger btn-sm">Riwayat</a>
                     <table id="example" class="table align-items-center mb-0">
                         <thead>
                             <tr>
-                                <th>No</th><th>Ruang</th><th>Peminjam</th><th>Pinjam</th><th>Kembali</th><th>Status Pengajuan</th><th>Surat</th><th>Aksi</th>
+                                <th>No</th><th>Ruang</th><th>Peminjam</th><th>Pinjam</th><th>Kembali</th>
+                                <th>Status Pengajuan</th><th>Surat</th><th>Status Peminjaman</th><th>Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -53,22 +52,49 @@
                                 <td>{{ $p['nama_peminjam'] ?? '' }}</td>
                                 <td>{{ $p['tanggal_pinjam'] ?? '' }}</td>
                                 <td>{{ $p['tanggal_kembali'] ?? '' }}</td>
-                                <td><span class="badge bg-{{ ($p['status_pengajuan'] ?? null) === true ? 'success' : (is_null($p['status_pengajuan'] ?? null) ? 'warning' : 'danger') }}">{{ is_null($p['status_pengajuan'] ?? null) ? 'Menunggu' : ($p['status_pengajuan'] ? 'Disetujui' : 'Ditolak') }}</span></td>
-                                <td><a href="{{ asset('storage/surat/'.($p['surat'] ?? '')) }}" target="_blank">Lihat</a></td>
+                                <td>
+                                    @php $statusPengajuan = $p['status_pengajuan'] ?? null; @endphp
+                                    <span class="badge bg-{{ is_null($statusPengajuan) ? 'warning' : ($statusPengajuan ? 'success' : 'danger') }}">
+                                        {{ is_null($statusPengajuan) ? 'Menunggu' : ($statusPengajuan ? 'Disetujui' : 'Ditolak') }}
+                                    </span>
+                                </td>
+                                <td>
+                                    @if(!empty($p['surat']))
+                                        <a href="{{ asset($p['surat']) }}" target="_blank" class="btn btn-info btn-sm">Lihat</a>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                                <td>
+                                    @php $statusPinjam = $p['status'] ?? 'dipinjam'; @endphp
+                                    <span class="badge bg-{{ $statusPinjam === 'dikembalikan' ? 'secondary' : 'primary' }}">
+                                        {{ $statusPinjam === 'dikembalikan' ? 'Dikembalikan' : 'Dipinjam' }}
+                                    </span>
+                                </td>
                                 <td>
                                     @if(auth()->user()->hasRole('admin'))
-                                        <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editModal" onclick="fillEdit('{{ $p['_id'] }}', '{{ $p['ruang_id'] }}', '{{ $p['nama_peminjam'] }}', '{{ $p['tanggal_pinjam'] }}', '{{ $p['tanggal_kembali'] }}')"><i class="fa fa-edit"></i></button>
-                                        <a href="/peminjaman-hapus/{{ $p['_id'] }}" class="btn btn-danger btn-sm" onclick="return confirm('Yakin?')">Hapus</a>
-                                    @elseif(auth()->user()->hasRole('wakasek'))
+                                        <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editModal" 
+                                            onclick="fillEdit('{{ $p['_id'] }}', '{{ $p['ruang_id'] }}', '{{ $p['nama_peminjam'] }}', '{{ $p['tanggal_pinjam'] }}', '{{ $p['tanggal_kembali'] }}')">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <form action="{{ url('/peminjaman-hapus/' . $p['ruang_id'] . '/' . $p['_id']) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('Yakin hapus peminjaman ini?')">
+                                            @csrf @method('DELETE')
+                                            <button class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></button>
+                                        </form>
                                         @if(is_null($p['status_pengajuan'] ?? null))
-                                            <a href="/peminjaman-approve/{{ $p['_id'] }}" class="btn btn-success btn-sm">Setuju</a>
-                                            <a href="/peminjaman-decline/{{ $p['_id'] }}" class="btn btn-danger btn-sm">Tolak</a>
+                                            <a href="{{ url('/peminjaman-approve/' . $p['_id']) }}" class="btn btn-success btn-sm" onclick="return confirm('Setujui peminjaman?')">Setuju</a>
+                                            <a href="{{ url('/peminjaman-decline/' . $p['_id']) }}" class="btn btn-danger btn-sm" onclick="return confirm('Tolak peminjaman?')">Tolak</a>
                                         @endif
+                                        @if(($p['status'] ?? 'dipinjam') !== 'dikembalikan')
+                                            <a href="{{ url('/peminjaman-complete/' . $p['ruang_id'] . '/' . $p['_id']) }}" class="btn btn-secondary btn-sm" onclick="return confirm('Tandai sebagai dikembalikan?')">Selesai</a>
+                                        @endif
+                                    @else
+                                        <span class="badge bg-secondary">No action</span>
                                     @endif
                                 </td>
                             </tr>
                             @empty
-                            <tr><td colspan="8" class="text-center">Tidak ada data.</td></tr>
+                            <tr><td colspan="9" class="text-center">Tidak ada
                             @endforelse
                         </tbody>
                     </table>
@@ -78,7 +104,7 @@
     </div>
 </div>
 
-{{-- Modal Insert --}}
+{{-- Modal Tambah --}}
 <div class="modal fade" id="insertModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -109,8 +135,8 @@
                 <form id="editForm" method="post" enctype="multipart/form-data">
                     @csrf @method('PUT')
                     <input type="hidden" name="id" id="editId">
+                    <input type="hidden" name="ruang_id" id="editRuangId">
                     <div class="row">
-                        <div class="col-md-6 mb-3"><label>Ruang</label><select name="ruang_id" id="editRuangId" class="form-select">@foreach($ruang as $r)<option value="{{ $r->_id }}">{{ $r->nama_ruang }}</option>@endforeach</select></div>
                         <div class="col-md-6 mb-3"><label>Nama Peminjam</label><input type="text" name="nama_peminjam" id="editNama" class="form-control" required></div>
                         <div class="col-md-6 mb-3"><label>Tgl Pinjam</label><input type="date" name="tgl_peminjaman" id="editTglPinjam" class="form-control" required></div>
                         <div class="col-md-6 mb-3"><label>Tgl Kembali</label><input type="date" name="tgl_pengembalian" id="editTglKembali" class="form-control" required></div>
@@ -130,7 +156,7 @@
         document.getElementById('editNama').value = nama;
         document.getElementById('editTglPinjam').value = tglPinjam;
         document.getElementById('editTglKembali').value = tglKembali;
+        document.getElementById('editForm').action = '/peminjaman-update/' + ruangId + '/' + id;
     }
 </script>
-@endif
 @endsection
